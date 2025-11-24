@@ -37,6 +37,23 @@ else:
 st.sidebar.divider()
 debug_mode = st.sidebar.checkbox("🐛 Debug Mode", value=False, help="顯示每個 Agent 的詳細輸出和預覽")
 
+# --- Helper Functions ---
+def get_error_type_badge(feedback):
+    """Extract error type from feedback and return appropriate badge style."""
+    import re
+    match = re.search(r'【(.+?)】', feedback)
+    if match:
+        error_type = match.group(1)
+        if '文法' in error_type or '致命' in error_type:
+            return error_type, "🔴"
+        elif '選詞' in error_type or '用詞' in error_type:
+            return error_type, "🟡"
+        elif '句型' in error_type or '句構' in error_type:
+            return error_type, "🔵"
+        else:
+            return error_type, "⚪"
+    return None, None
+
 # --- Agent 1: Transcription ---
 def agent_transcription(user_images, answer_image):
     """
@@ -324,37 +341,123 @@ if st.button("Start Analysis 🚀"):
         
         # --- Display Results ---
         st.divider()
-        st.header("📊 分析結果 (Analysis Results)")
-        
-        # Parse JSON for Table Display
+        st.header("📊 批改結果")
+
+        # Parse JSON and display in card format
         try:
             import json
             data = json.loads(correction_result)
-            df = pd.DataFrame(data)
-            
-            st.subheader("1. 詳細批改表")
-            st.dataframe(df, use_container_width=True)
-            
-            with st.expander("查看詳細點評 (Markdown View)"):
-                for item in data:
-                    st.markdown(f"### 題號 {item['id']}")
-                    st.markdown(f"**User**: {item['user']}")
-                    st.markdown(f"**Correction**: {item['correction']}")
-                    st.info(item['feedback'])
+
+            st.markdown(f"**批改完成，共 {len(data)} 題**")
+            st.divider()
+
+            # Display each correction as a card
+            for idx, item in enumerate(data, 1):
+                question_id = item.get('id', f'Q{idx}')
+                user_text = item.get('user', '')
+                correction_text = item.get('correction', '')
+                feedback = item.get('feedback', '')
+
+                # Extract error type
+                error_type, badge = get_error_type_badge(feedback)
+
+                # Card container
+                with st.container():
+                    # Header with question ID and error type
+                    col_header1, col_header2 = st.columns([3, 1])
+                    with col_header1:
+                        st.markdown(f"### 題號 {question_id}")
+                    with col_header2:
+                        if error_type:
+                            st.markdown(f"**{badge} {error_type}**")
+
+                    # User vs Correction comparison
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.markdown("**📝 原文 (User)**")
+                        st.text_area(
+                            label="原文",
+                            value=user_text,
+                            height=100,
+                            key=f"user_{idx}",
+                            disabled=True,
+                            label_visibility="collapsed"
+                        )
+
+                    with col2:
+                        st.markdown("**✅ 修正 (Correction)**")
+                        st.text_area(
+                            label="修正",
+                            value=correction_text,
+                            height=100,
+                            key=f"correction_{idx}",
+                            disabled=True,
+                            label_visibility="collapsed"
+                        )
+
+                    # Feedback section
+                    st.markdown("**💡 點評**")
+                    # Remove the error type tag from feedback for cleaner display
+                    import re
+                    clean_feedback = re.sub(r'【.+?】', '', feedback).strip()
+                    st.info(clean_feedback)
+
                     st.divider()
-                    
+
         except Exception as e:
             st.error(f"Error parsing correction data: {e}")
-            st.text(correction_result)
+            with st.expander("查看原始輸出"):
+                st.text(correction_result)
 
         st.divider()
-        st.subheader("2. 專屬單字卡 (Flashcards)")
-        st.text_area("CSV 內容 (可直接複製)", flashcards_result, height=300)
-        
+        st.header("📇 專屬單字卡")
+
+        # Parse and display flashcard stats
+        lines = flashcards_result.strip().split('\n')
+        card_count = max(0, len(lines) - 1)
+        st.markdown(f"**已生成 {card_count} 張單字卡**")
+
+        # Preview in tabs
+        tab1, tab2 = st.tabs(["📋 預覽", "📄 完整內容"])
+
+        with tab1:
+            st.markdown("**前 5 張單字卡預覽：**")
+            if len(lines) > 1:
+                # Parse CSV and display as cards
+                import csv
+                import io
+                reader = csv.DictReader(io.StringIO(flashcards_result))
+                for idx, row in enumerate(reader, 1):
+                    if idx > 5:
+                        break
+                    with st.container():
+                        col1, col2 = st.columns([1, 2])
+                        with col1:
+                            st.markdown(f"**正面**")
+                            st.info(row.get('Front', ''))
+                        with col2:
+                            st.markdown(f"**背面**")
+                            st.success(row.get('Back', ''))
+                        if idx < 5 and idx < card_count:
+                            st.markdown("---")
+
+        with tab2:
+            st.markdown("**完整 CSV 內容（可直接複製匯入 Anki/Quizlet）：**")
+            st.text_area(
+                label="CSV",
+                value=flashcards_result,
+                height=400,
+                label_visibility="collapsed"
+            )
+
         # Download Button
-        st.download_button(
-            label="下載單字卡 CSV",
-            data=flashcards_result,
-            file_name="flashcards.csv",
-            mime="text/csv"
-        )
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            st.download_button(
+                label="⬇️ 下載 CSV",
+                data=flashcards_result,
+                file_name="flashcards.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
