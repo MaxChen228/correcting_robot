@@ -37,22 +37,6 @@ else:
 st.sidebar.divider()
 debug_mode = st.sidebar.checkbox("🐛 Debug Mode", value=False, help="顯示每個 Agent 的詳細輸出和預覽")
 
-# --- Helper Functions ---
-def get_error_type_badge(feedback):
-    """Extract error type from feedback and return appropriate badge style."""
-    import re
-    match = re.search(r'【(.+?)】', feedback)
-    if match:
-        error_type = match.group(1)
-        if '文法' in error_type or '致命' in error_type:
-            return error_type, "🔴"
-        elif '選詞' in error_type or '用詞' in error_type:
-            return error_type, "🟡"
-        elif '句型' in error_type or '句構' in error_type:
-            return error_type, "🔵"
-        else:
-            return error_type, "⚪"
-    return None, None
 
 # --- Agent 1: Transcription ---
 def agent_transcription(user_images, answer_image):
@@ -124,31 +108,34 @@ def agent_correction(transcription_json):
     model = genai.GenerativeModel('gemini-3-pro-preview')
     
     prompt = f"""
-    你是一位嚴格但循循善誘的英文作文教練。
-    
+    你是一位專業的英文批改老師。請務必使用繁體中文。
+
     輸入資料 (JSON):
     {transcription_json}
-    
+
     任務：
-    針對每一題，比對 User 的寫作與 Standard 標準答案，進行深度批改。
-    
-    分析維度：
-    1. **致命傷**：文法錯誤（如主詞動詞不一致、時態錯誤、單複數錯誤）。
-    2. **選詞**：User 的用詞是否精準？有無更道地的表達？
-    3. **句型**：句構是否符合英文邏輯？
-    
+    針對每一題，比對 User 的寫作與 Standard 標準答案，指出問題並提供修正版本。
+
     輸出格式要求：
-    請直接輸出一個純 JSON Array，不要有任何 Markdown 標記。
+    請直接輸出一個純 JSON Array，不要有任何 Markdown 標記（如 **, ##, 【】等）。
     格式如下：
     [
         {{
             "id": "1.1",
             "user": "User's original text",
             "correction": "The best corrected version",
-            "feedback": "【錯誤類型】詳細解釋... (請用繁體中文，可使用 markdown 語法)"
+            "feedback": "簡潔說明錯誤原因和如何改正"
         }},
         ...
     ]
+
+    Feedback 撰寫原則：
+    - 用 2-3 句話清楚說明：哪裡錯了、為什麼錯、正確用法
+    - 使用純文字，不使用任何 markdown 或 HTML 標記
+    - 保持專業但易懂的語氣
+
+    範例 feedback：
+    "原文使用 'practices' 是複數，但後面用 'it' 指代是單數，應該用 'them'。另外 'drills' 比 'practices' 更適合描述聽力練習。"
     """
     
     try:
@@ -187,8 +174,7 @@ def agent_flashcards(correction_json):
 
     輸出格式要求：
     1. 直接輸出 CSV 格式，包含 Header: Front,Back
-    2. **絕對不要使用 HTML 標籤**（如 <br>, **粗體** 等）
-    3. 使用純文字，適合直接匯入 Anki 或 Quizlet
+    2. 使用純文字，適合直接匯入 Anki 或 Quizlet
 
     Front (正面) 格式：
     - 中文詞彙或片語 + (用法說明)
@@ -358,24 +344,16 @@ if st.button("Start Analysis 🚀"):
                 correction_text = item.get('correction', '')
                 feedback = item.get('feedback', '')
 
-                # Extract error type
-                error_type, badge = get_error_type_badge(feedback)
-
                 # Card container
                 with st.container():
-                    # Header with question ID and error type
-                    col_header1, col_header2 = st.columns([3, 1])
-                    with col_header1:
-                        st.markdown(f"### 題號 {question_id}")
-                    with col_header2:
-                        if error_type:
-                            st.markdown(f"**{badge} {error_type}**")
+                    # Header with question ID
+                    st.markdown(f"### 題號 {question_id}")
 
                     # User vs Correction comparison
                     col1, col2 = st.columns(2)
 
                     with col1:
-                        st.markdown("**📝 原文 (User)**")
+                        st.markdown("**📝 原文**")
                         st.text_area(
                             label="原文",
                             value=user_text,
@@ -386,7 +364,7 @@ if st.button("Start Analysis 🚀"):
                         )
 
                     with col2:
-                        st.markdown("**✅ 修正 (Correction)**")
+                        st.markdown("**✅ 修正**")
                         st.text_area(
                             label="修正",
                             value=correction_text,
@@ -396,12 +374,9 @@ if st.button("Start Analysis 🚀"):
                             label_visibility="collapsed"
                         )
 
-                    # Feedback section
-                    st.markdown("**💡 點評**")
-                    # Remove the error type tag from feedback for cleaner display
-                    import re
-                    clean_feedback = re.sub(r'【.+?】', '', feedback).strip()
-                    st.info(clean_feedback)
+                    # Feedback section - directly display without processing
+                    st.markdown("**💡 說明**")
+                    st.info(feedback)
 
                     st.divider()
 
