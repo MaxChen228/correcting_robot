@@ -124,18 +124,26 @@ def agent_correction(transcription_json):
             "id": "1.1",
             "user": "User's original text",
             "correction": "The best corrected version",
-            "feedback": "簡潔說明錯誤原因和如何改正"
+            "feedback": [
+                "第一個錯誤點的說明",
+                "第二個錯誤點的說明"
+            ]
         }},
         ...
     ]
 
     Feedback 撰寫原則：
-    - 用 2-3 句話清楚說明：哪裡錯了、為什麼錯、正確用法
+    - feedback 是一個陣列，每個元素是一個獨立的錯誤點
+    - 每個錯誤點用 1-2 句話清楚說明：哪裡錯了、為什麼錯、正確用法
+    - 如果只有一個錯誤，陣列就只有一個元素
     - 使用純文字，不使用任何 markdown 或 HTML 標記
     - 保持專業但易懂的語氣
 
     範例 feedback：
-    "原文使用 'practices' 是複數，但後面用 'it' 指代是單數，應該用 'them'。另外 'drills' 比 'practices' 更適合描述聽力練習。"
+    [
+        "原文使用 'practices' 是複數，但後面用 'it' 指代是單數，應該用 'them'。",
+        "'drills' 比 'practices' 更適合描述聽力練習。"
+    ]
     """
     
     try:
@@ -374,9 +382,19 @@ if st.button("Start Analysis 🚀"):
                             label_visibility="collapsed"
                         )
 
-                    # Feedback section - directly display without processing
+                    # Feedback section - display each error point
                     st.markdown("**💡 說明**")
-                    st.info(feedback)
+
+                    # Handle both array and string formats for backwards compatibility
+                    if isinstance(feedback, list):
+                        for i, point in enumerate(feedback, 1):
+                            if len(feedback) > 1:
+                                st.info(f"**{i}.** {point}")
+                            else:
+                                st.info(point)
+                    else:
+                        # Fallback for string feedback
+                        st.info(feedback)
 
                     st.divider()
 
