@@ -5,6 +5,9 @@ import google.generativeai as genai
 from PIL import Image
 import pandas as pd
 import io
+import json
+from datetime import datetime
+from supabase import create_client, Client
 
 # Load environment variables
 load_dotenv()
@@ -12,6 +15,18 @@ load_dotenv()
 # Configure Gemini API
 # Users need to set GOOGLE_API_KEY in .env or via UI
 api_key = os.getenv("GOOGLE_API_KEY")
+
+# Configure Supabase
+supabase_url = os.getenv("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
+
+# Initialize Supabase client
+supabase: Client = None
+if supabase_url and supabase_key:
+    try:
+        supabase = create_client(supabase_url, supabase_key)
+    except Exception as e:
+        st.error(f"❌ Supabase 連接失敗: {e}")
 
 st.set_page_config(
     page_title="Handwriting Correction AI",
@@ -36,6 +51,30 @@ else:
 # Debug Mode Toggle
 st.sidebar.divider()
 debug_mode = st.sidebar.checkbox("🐛 Debug Mode", value=False, help="顯示每個 Agent 的詳細輸出和預覽")
+
+# Sidebar: History Management
+st.sidebar.divider()
+st.sidebar.subheader("📚 批改歷史")
+
+# Check Supabase connection
+if supabase:
+    st.sidebar.success("✅ 已連接雲端數據庫")
+
+    # Fetch history count from Supabase
+    try:
+        response = supabase.table("correction_history").select("id", count="exact").execute()
+        history_count = response.count if hasattr(response, 'count') else 0
+        st.sidebar.metric("已記錄批改次數", history_count)
+
+        # View history button
+        if st.sidebar.button("📖 查看歷史記錄", use_container_width=True):
+            st.session_state.show_history = True
+
+    except Exception as e:
+        st.sidebar.error(f"❌ 讀取歷史失敗: {e}")
+else:
+    st.sidebar.warning("⚠️ 未配置 Supabase，歷史記錄功能不可用")
+    st.sidebar.info("請在 .env 或 Streamlit secrets 中設定 SUPABASE_URL 和 SUPABASE_KEY")
 
 
 # --- Agent 1: Transcription ---
@@ -332,7 +371,21 @@ if st.button("Start Analysis 🚀"):
             else:
                 status.update(label="Agent 3 失敗", state="error")
                 st.stop()
-        
+
+        # --- Save to Supabase ---
+        if supabase:
+            try:
+                correction_data = json.loads(correction_result)
+                history_entry = {
+                    "timestamp": datetime.now().isoformat(),
+                    "corrections": correction_data,
+                    "flashcards": flashcards_result
+                }
+                supabase.table("correction_history").insert(history_entry).execute()
+                st.success("✅ 已自動保存到雲端數據庫")
+            except Exception as e:
+                st.warning(f"⚠️ 無法保存到數據庫: {e}")
+
         # --- Display Results ---
         st.divider()
         st.header("📊 批改結果")
