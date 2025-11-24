@@ -33,13 +33,17 @@ if not api_key:
 else:
     genai.configure(api_key=api_key)
 
+# Debug Mode Toggle
+st.sidebar.divider()
+debug_mode = st.sidebar.checkbox("🐛 Debug Mode", value=False, help="顯示每個 Agent 的詳細輸出和預覽")
+
 # --- Agent 1: Transcription ---
 def agent_transcription(user_images, answer_image):
     """
     Agent 1: Digitizes handwriting and aligns it with the standard answer.
     Returns: JSON string.
     """
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    model = genai.GenerativeModel('gemini-3-pro-preview')
     
     prompt = """
     你是一個專業的文字辨識與對齊助理。
@@ -88,7 +92,10 @@ def agent_transcription(user_images, answer_image):
             text = text[:-3]
         return text.strip()
     except Exception as e:
-        st.error(f"Agent 1 Error: {e}")
+        import traceback
+        st.error(f"❌ Agent 1 錯誤: {type(e).__name__}: {str(e)}")
+        with st.expander("🔍 查看錯誤詳情"):
+            st.code(traceback.format_exc(), language='python')
         return None
 
 # --- Agent 2: Correction ---
@@ -97,7 +104,7 @@ def agent_correction(transcription_json):
     Agent 2: Analyzes the text and provides corrections.
     Returns: JSON string.
     """
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    model = genai.GenerativeModel('gemini-3-pro-preview')
     
     prompt = f"""
     你是一位嚴格但循循善誘的英文作文教練。
@@ -138,7 +145,10 @@ def agent_correction(transcription_json):
             text = text[:-3]
         return text.strip()
     except Exception as e:
-        st.error(f"Agent 2 Error: {e}")
+        import traceback
+        st.error(f"❌ Agent 2 錯誤: {type(e).__name__}: {str(e)}")
+        with st.expander("🔍 查看錯誤詳情"):
+            st.code(traceback.format_exc(), language='python')
         return None
 
 # --- Agent 3: Flashcards ---
@@ -147,33 +157,55 @@ def agent_flashcards(correction_json):
     Agent 3: Generates flashcards from the corrections.
     Returns: CSV string.
     """
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    model = genai.GenerativeModel('gemini-3-pro-preview')
     
     prompt = f"""
-    你是一個單字卡製作助理。
-    
+    你是一個專業的單字卡製作助理。請務必使用繁體中文。
+
     輸入資料 (批改結果 JSON):
     {correction_json}
-    
+
     任務：
-    從上述的批改內容與標準答案中，提煉出使用者需要學習的「單字」、「片語」或「句型」。
-    不要只列出單字，要包含用法。
-    
+    從批改內容與標準答案中，提煉出使用者需要學習的「單字」、「片語」或「句型」，製作成簡潔易記的單字卡。
+
     輸出格式要求：
-    請直接輸出 CSV 格式的文字，包含 Header。
-    欄位：Front, Back
-    
-    Front (正面): 關鍵詞或中文提示 (例如: "隨著 (連接詞用法)")
-    Back (背面): 英文用法、結構與例句 (例如: "As + S + V (Ex: As time goes by...)")
-    
-    請確保內容豐富且實用，適合匯入 Anki 或 Quizlet。
+    1. 直接輸出 CSV 格式，包含 Header: Front,Back
+    2. **絕對不要使用 HTML 標籤**（如 <br>, **粗體** 等）
+    3. 使用純文字，適合直接匯入 Anki 或 Quizlet
+
+    Front (正面) 格式：
+    - 中文詞彙或片語 + (用法說明)
+    - 範例：
+      * 隨著(連接詞用法)
+      * 收聽(搭配介系詞to)
+      * 文法(不可數學科名)
+      * 讓某人大大失望的是(情緒片語)
+
+    Back (背面) 格式：
+    - 英文結構 + 簡短重點說明 + (Ex: 例句)
+    - 範例：
+      * As + S + V (Ex: As teenagers reach puberty, they notice changes in their bodies.)
+      * tune in to (Ex: I tune in to the BBC news every morning.)
+      * grammar (Ex: Grammar is the rule system of a language.)
+      * Much to one's disappointment (Ex: Much to his disappointment, she said no.)
+
+    重要原則：
+    - 每張卡片聚焦一個知識點
+    - 保持簡潔，避免冗長解釋
+    - 不要使用「注意」、「辨析」、「修正」等學術用語
+    - 例句要實用且貼近日常使用情境
+    - 所有中文說明必須使用繁體中文
+    - 純文字格式，不使用任何標記語言
     """
     
     try:
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        st.error(f"Agent 3 Error: {e}")
+        import traceback
+        st.error(f"❌ Agent 3 錯誤: {type(e).__name__}: {str(e)}")
+        with st.expander("🔍 查看錯誤詳情"):
+            st.code(traceback.format_exc(), language='python')
         return None
 
 # --- UI Layout ---
@@ -201,8 +233,31 @@ if st.button("Start Analysis 🚀"):
         with st.status("🤖 Agent 1: 正在辨識手寫內容與標準答案...", expanded=True) as status:
             transcription_result = agent_transcription(user_images, answer_image)
             if transcription_result:
-                st.write("✅ 辨識完成！")
-                # st.json(transcription_result) # Debug
+                # Parse and display stats
+                try:
+                    import json
+                    transcription_data = json.loads(transcription_result)
+                    question_count = len(transcription_data)
+                    st.write(f"✅ 辨識完成！共 {question_count} 題")
+
+                    # Preview first 2 items
+                    if question_count > 0:
+                        st.write("**預覽前 2 題：**")
+                        for item in transcription_data[:2]:
+                            st.markdown(f"- **{item.get('id', 'N/A')}**: User: `{item.get('user', '')[:50]}...` | Standard: `{item.get('standard', '')[:50]}...`")
+
+                    # Debug mode: show full output
+                    if debug_mode:
+                        with st.expander("📋 查看完整辨識結果 (JSON)"):
+                            st.json(transcription_data)
+
+                except json.JSONDecodeError as e:
+                    st.warning(f"⚠️ JSON 解析失敗: {e}")
+                    st.write("✅ 辨識完成（但格式可能有問題）")
+                    if debug_mode:
+                        with st.expander("📋 查看原始輸出"):
+                            st.text(transcription_result)
+
                 status.update(label="Agent 1 完成", state="complete", expanded=False)
             else:
                 status.update(label="Agent 1 失敗", state="error")
@@ -212,7 +267,31 @@ if st.button("Start Analysis 🚀"):
         with st.status("👩‍🏫 Agent 2: 正在進行批改與點評...", expanded=True) as status:
             correction_result = agent_correction(transcription_result)
             if correction_result:
-                st.write("✅ 批改完成！")
+                # Parse and display stats
+                try:
+                    import json
+                    correction_data = json.loads(correction_result)
+                    correction_count = len(correction_data)
+                    st.write(f"✅ 批改完成！共批改 {correction_count} 題")
+
+                    # Preview first 2 corrections
+                    if correction_count > 0:
+                        st.write("**預覽前 2 題批改：**")
+                        for item in correction_data[:2]:
+                            st.markdown(f"- **{item.get('id', 'N/A')}**: {item.get('feedback', '')[:80]}...")
+
+                    # Debug mode: show full output
+                    if debug_mode:
+                        with st.expander("📋 查看完整批改結果 (JSON)"):
+                            st.json(correction_data)
+
+                except json.JSONDecodeError as e:
+                    st.warning(f"⚠️ JSON 解析失敗: {e}")
+                    st.write("✅ 批改完成（但格式可能有問題）")
+                    if debug_mode:
+                        with st.expander("📋 查看原始輸出"):
+                            st.text(correction_result)
+
                 status.update(label="Agent 2 完成", state="complete", expanded=False)
             else:
                 status.update(label="Agent 2 失敗", state="error")
@@ -222,7 +301,22 @@ if st.button("Start Analysis 🚀"):
         with st.status("📇 Agent 3: 正在製作單字卡...", expanded=True) as status:
             flashcards_result = agent_flashcards(correction_result)
             if flashcards_result:
-                st.write("✅ 單字卡製作完成！")
+                # Count and display stats
+                lines = flashcards_result.strip().split('\n')
+                card_count = max(0, len(lines) - 1)  # Subtract header row
+                st.write(f"✅ 單字卡製作完成！共 {card_count} 張")
+
+                # Preview first 3 lines
+                if len(lines) > 1:
+                    st.write("**預覽前 3 張單字卡：**")
+                    preview_lines = lines[:4]  # Header + 3 rows
+                    st.code('\n'.join(preview_lines), language='csv')
+
+                # Debug mode: show full output
+                if debug_mode:
+                    with st.expander("📋 查看完整單字卡 (CSV)"):
+                        st.text(flashcards_result)
+
                 status.update(label="Agent 3 完成", state="complete", expanded=False)
             else:
                 status.update(label="Agent 3 失敗", state="error")
