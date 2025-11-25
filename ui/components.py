@@ -101,21 +101,42 @@ def render_correction_results(correction_data, show_title: bool = True):
 
             # Wrapper with inline card styling
             st.markdown("""
-            <div style="
+            <div class="correction-card-enhanced" style="
                 background: rgba(18, 18, 18, 0.6);
                 border: 1px solid #333;
                 border-radius: 8px;
                 padding: 24px;
                 margin-bottom: 32px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+                position: relative;
+                overflow: hidden;
+                box-shadow:
+                    0 4px 6px rgba(0, 0, 0, 0.3),
+                    0 1px 3px rgba(0, 0, 0, 0.2),
+                    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+                transition:
+                    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 0.35s ease;
             ">
             """, unsafe_allow_html=True)
 
-            # Card header
+            # Card header with gradient separator
             st.markdown(f"""
-                <h3 style="color: #888; margin-bottom: 1.5rem; font-family: 'Space Mono', monospace; font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase;">
-                    NO. {question_id}
-                </h3>
+                <div style="position: relative; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                    <h3 style="
+                        color: #888;
+                        font-family: 'Space Mono', monospace;
+                        font-size: 0.9rem;
+                        letter-spacing: 0.1em;
+                        text-transform: uppercase;
+                        margin: 0;
+                    ">NO. {question_id}</h3>
+                    <div style="
+                        height: 1px;
+                        background: linear-gradient(90deg, transparent 0%, #333 10%, #555 50%, #333 90%, transparent 100%);
+                        margin-top: 0.75rem;
+                    "></div>
+                </div>
             """, unsafe_allow_html=True)
 
             col1, col2 = st.columns(2)
@@ -180,6 +201,26 @@ def render_flashcards_section(flashcards_csv: str, show_title: bool = True, down
                 if idx > 6:  # Show only first 6 cards
                     break
 
+                # Flashcard item wrapper
+                st.markdown("""
+                <div class="flashcard-item" style="
+                    padding: 1.5rem;
+                    border: 1px solid #222;
+                    border-radius: 6px;
+                    margin-bottom: 1.5rem;
+                    background: linear-gradient(135deg, rgba(18,18,18,0.4) 0%, rgba(15,15,15,0.3) 100%);
+                    position: relative;
+                    overflow: hidden;
+                    transition:
+                        border-color 0.3s ease,
+                        box-shadow 0.3s ease,
+                        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow:
+                        inset 0 0 0 1px rgba(255,255,255,0.01),
+                        0 2px 4px rgba(0,0,0,0.2);
+                ">
+                """, unsafe_allow_html=True)
+
                 col1, col2 = st.columns([1, 2])
                 with col1:
                     st.markdown(
@@ -199,7 +240,8 @@ def render_flashcards_section(flashcards_csv: str, show_title: bool = True, down
                         f"<p style='font-size:1.1rem; color:#aaa'>{row.get('Back', '')}</p>",
                         unsafe_allow_html=True
                     )
-                st.markdown("<hr style='border-top: 1px solid #222;'>", unsafe_allow_html=True)
+
+                st.markdown("</div>", unsafe_allow_html=True)
 
     with tab2:
         st.text_area(
@@ -257,12 +299,14 @@ def render_history_page(history_records: list):
 
         # Expandable section for each record
         with st.expander(f"Record #{idx} - {formatted_time}", expanded=(idx == 1)):
-            # Restore button
+            # Restore button with wrapper
+            st.markdown('<div class="restore-button-wrapper">', unsafe_allow_html=True)
             if st.button("Restore this record", key=f"restore_{record_id}"):
                 st.session_state.restored_corrections = corrections
                 st.session_state.restored_flashcards = flashcards
                 st.session_state.show_history = False
                 st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
