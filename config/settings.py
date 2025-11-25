@@ -15,7 +15,7 @@ class Config:
 
     # Google Gemini API
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-    GEMINI_MODEL = "gemini-1.5-pro-latest"
+    GEMINI_MODEL = "gemini-3-pro-preview"
 
     # Supabase Configuration
     SUPABASE_URL = os.getenv("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
