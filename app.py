@@ -51,10 +51,10 @@ st.markdown("""
 
     /* Global Styles */
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Space Mono', monospace;
         background-color: var(--bg-color);
         color: var(--text-primary);
-        font-weight: 300;
+        font-weight: 400;
     }
     
     /* Headings */
@@ -68,11 +68,12 @@ st.markdown("""
     h1 {
         font-size: 3.5rem !important;
         font-style: italic;
+        margin-bottom: 0 !important;
     }
     
     h2 {
         font-size: 2.2rem !important;
-        margin-top: 2rem !important;
+        margin-top: 1.5rem !important;
         border-bottom: 1px solid var(--border-color);
         padding-bottom: 0.5rem;
     }
@@ -97,13 +98,15 @@ st.markdown("""
         font-family: 'Tangerine', cursive;
         font-size: 2.5rem;
         color: var(--text-secondary);
+        margin-bottom: -1rem;
+        display: block;
     }
 
     /* Minimalist Containers */
     .minimal-container {
         border-top: 1px solid var(--border-color);
-        padding-top: 2rem;
-        margin-top: 2rem;
+        padding-top: 1.5rem;
+        margin-top: 1rem;
     }
 
     /* Custom Button Styling - Minimalist */
@@ -184,17 +187,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Header Section ---
-st.markdown('<div style="text-align: center; padding: 4rem 0;">', unsafe_allow_html=True)
-st.markdown('<p class="accent-text">The Art of Translation</p>', unsafe_allow_html=True)
+st.markdown('<div style="text-align: center; padding: 2rem 0 1rem 0;">', unsafe_allow_html=True)
+st.markdown('<span class="accent-text">The Art of Translation</span>', unsafe_allow_html=True)
 st.title("Handwriting Correction")
-st.markdown("""
-<p style="font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: #a0a0a0; font-style: italic; max-width: 600px; margin: 0 auto;">
-    Digitize. Analyze. Perfect.<br>
-    <span style="font-family: 'Inter', sans-serif; font-size: 0.9rem; font-style: normal; opacity: 0.7; display: block; margin-top: 1rem;">
-    Upload your handwritten exercises and standard answers for an in-depth critique.
-    </span>
-</p>
-""", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # Sidebar for API Key if not in env
