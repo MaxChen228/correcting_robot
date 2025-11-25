@@ -258,13 +258,11 @@ def render_history_page(history_records: list):
         # Expandable section for each record
         with st.expander(f"Record #{idx} - {formatted_time}", expanded=(idx == 1)):
             # Restore button
-            col_restore, col_spacer = st.columns([1, 3])
-            with col_restore:
-                if st.button("Restore this record", key=f"restore_{record_id}", use_container_width=True):
-                    st.session_state.restored_corrections = corrections
-                    st.session_state.restored_flashcards = flashcards
-                    st.session_state.show_history = False
-                    st.rerun()
+            if st.button("Restore this record", key=f"restore_{record_id}"):
+                st.session_state.restored_corrections = corrections
+                st.session_state.restored_flashcards = flashcards
+                st.session_state.show_history = False
+                st.rerun()
 
             st.markdown("<br>", unsafe_allow_html=True)
 
