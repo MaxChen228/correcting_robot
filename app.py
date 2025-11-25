@@ -13,7 +13,6 @@ from supabase import create_client, Client
 load_dotenv()
 
 # Configure Gemini API
-# Users need to set GOOGLE_API_KEY in .env or via UI
 api_key = os.getenv("GOOGLE_API_KEY")
 
 # Configure Supabase
@@ -34,11 +33,106 @@ st.set_page_config(
     layout="wide"
 )
 
+# --- Custom CSS & Theme Injection ---
+st.markdown("""
+<style>
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@400;600;700&display=swap');
+
+    /* Global Styles */
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    h1, h2, h3 {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+    }
+
+    /* Gradient Background for Main App */
+    .stApp {
+        background: radial-gradient(circle at top left, #1a1c24, #0e1117);
+    }
+
+    /* Glassmorphism Containers */
+    .glass-container {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Custom Button Styling */
+    .stButton > button {
+        background: linear-gradient(135deg, #6C63FF 0%, #4834d4 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(108, 99, 255, 0.4);
+    }
+    .stButton > button:active {
+        transform: translateY(0);
+    }
+
+    /* File Uploader Styling */
+    [data-testid="stFileUploader"] {
+        border: 1px dashed rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.02);
+        transition: border-color 0.3s;
+    }
+    [data-testid="stFileUploader"]:hover {
+        border-color: #6C63FF;
+    }
+
+    /* Card Styling for Corrections */
+    .correction-card {
+        background: rgba(30, 32, 40, 0.6);
+        border-left: 4px solid #6C63FF;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    
+    /* Status Container */
+    .stStatus {
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 12px !important;
+    }
+
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #0E1117;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Header Section ---
+st.markdown('<div class="glass-container" style="text-align: center;">', unsafe_allow_html=True)
 st.title("📝 Handwriting Translation Correction System")
 st.markdown("""
-Upload your handwritten translation exercises and the standard answer key.
-The AI will transcribe, correct, and generate flashcards for you.
-""")
+<p style="font-size: 1.1rem; color: #a0a0a0;">
+    Upload your handwritten translation exercises and the standard answer key.<br>
+    The AI will <span style="color: #6C63FF; font-weight: 600;">transcribe</span>, 
+    <span style="color: #6C63FF; font-weight: 600;">correct</span>, and 
+    <span style="color: #6C63FF; font-weight: 600;">generate flashcards</span> for you.
+</p>
+""", unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Sidebar for API Key if not in env
 if not api_key:
@@ -83,7 +177,7 @@ def agent_transcription(user_images, answer_image):
     Agent 1: Digitizes handwriting and aligns it with the standard answer.
     Returns: JSON string.
     """
-    model = genai.GenerativeModel('gemini-3-pro-preview')
+    model = genai.GenerativeModel('gemini-1.5-pro-latest')
     
     prompt = """
     你是一個專業的文字辨識與對齊助理。
@@ -144,7 +238,7 @@ def agent_correction(transcription_json):
     Agent 2: Analyzes the text and provides corrections.
     Returns: JSON string.
     """
-    model = genai.GenerativeModel('gemini-3-pro-preview')
+    model = genai.GenerativeModel('gemini-1.5-pro-latest')
     
     prompt = f"""
     你是一位專業的英文批改老師。請務必使用繁體中文。
@@ -208,7 +302,7 @@ def agent_flashcards(correction_json):
     Agent 3: Generates flashcards from the corrections.
     Returns: CSV string.
     """
-    model = genai.GenerativeModel('gemini-3-pro-preview')
+    model = genai.GenerativeModel('gemini-1.5-pro-latest')
     
     prompt = f"""
     你是一個專業的單字卡製作助理。請務必使用繁體中文。
@@ -259,6 +353,7 @@ def agent_flashcards(correction_json):
         return None
 
 # --- UI Layout ---
+st.markdown('<div class="glass-container">', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
 with col1:
@@ -268,8 +363,9 @@ with col1:
 with col2:
     st.subheader("2. Upload Standard Answer")
     answer_file = st.file_uploader("Upload answer key image", type=['png', 'jpg', 'jpeg'])
+st.markdown('</div>', unsafe_allow_html=True)
 
-if st.button("Start Analysis 🚀"):
+if st.button("Start Analysis 🚀", use_container_width=True):
     if not api_key:
         st.error("Please provide a Google API Key to proceed.")
     elif not user_files or not answer_file:
@@ -388,7 +484,7 @@ if st.button("Start Analysis 🚀"):
 
         # --- Display Results ---
         st.divider()
-        st.header("📊 批改結果")
+        st.markdown('<h2 style="text-align: center;">📊 批改結果</h2>', unsafe_allow_html=True)
 
         # Parse JSON and display in card format
         try:
@@ -396,8 +492,7 @@ if st.button("Start Analysis 🚀"):
             data = json.loads(correction_result)
 
             st.markdown(f"**批改完成，共 {len(data)} 題**")
-            st.divider()
-
+            
             # Display each correction as a card
             for idx, item in enumerate(data, 1):
                 question_id = item.get('id', f'Q{idx}')
@@ -405,51 +500,34 @@ if st.button("Start Analysis 🚀"):
                 correction_text = item.get('correction', '')
                 feedback = item.get('feedback', '')
 
-                # Card container
+                # Custom Card Container
+                st.markdown(f"""
+                <div class="correction-card">
+                    <h4 style="margin-top:0; color:#6C63FF;">題號 {question_id}</h4>
+                </div>
+                """, unsafe_allow_html=True)
+                
                 with st.container():
-                    # Header with question ID
-                    st.markdown(f"### 題號 {question_id}")
-
                     # User vs Correction comparison
                     col1, col2 = st.columns(2)
 
                     with col1:
                         st.markdown("**📝 原文**")
-                        st.text_area(
-                            label="原文",
-                            value=user_text,
-                            height=100,
-                            key=f"user_{idx}",
-                            disabled=True,
-                            label_visibility="collapsed"
-                        )
+                        st.info(user_text) # Use st.info for better visibility in dark mode
 
                     with col2:
                         st.markdown("**✅ 修正**")
-                        st.text_area(
-                            label="修正",
-                            value=correction_text,
-                            height=100,
-                            key=f"correction_{idx}",
-                            disabled=True,
-                            label_visibility="collapsed"
-                        )
+                        st.success(correction_text) # Use st.success for better visibility
 
-                    # Feedback section - display each error point
+                    # Feedback section
                     st.markdown("**💡 說明**")
-
-                    # Handle both array and string formats for backwards compatibility
                     if isinstance(feedback, list):
-                        for i, point in enumerate(feedback, 1):
-                            if len(feedback) > 1:
-                                st.info(f"**{i}.** {point}")
-                            else:
-                                st.info(point)
+                        for point in feedback:
+                            st.warning(f"• {point}")
                     else:
-                        # Fallback for string feedback
-                        st.info(feedback)
+                        st.warning(feedback)
 
-                    st.divider()
+                    st.markdown("---")
 
         except Exception as e:
             st.error(f"Error parsing correction data: {e}")
@@ -457,11 +535,13 @@ if st.button("Start Analysis 🚀"):
                 st.text(correction_result)
 
         st.divider()
-        st.header("📇 專屬單字卡")
+        st.markdown('<h2 style="text-align: center;">📇 專屬單字卡</h2>', unsafe_allow_html=True)
 
         # Parse and display flashcard stats
         lines = flashcards_result.strip().split('\n')
         card_count = max(0, len(lines) - 1)
+        
+        st.markdown(f'<div class="glass-container">', unsafe_allow_html=True)
         st.markdown(f"**已生成 {card_count} 張單字卡**")
 
         # Preview in tabs
@@ -470,23 +550,22 @@ if st.button("Start Analysis 🚀"):
         with tab1:
             st.markdown("**前 5 張單字卡預覽：**")
             if len(lines) > 1:
-                # Parse CSV and display as cards
                 import csv
                 import io
                 reader = csv.DictReader(io.StringIO(flashcards_result))
                 for idx, row in enumerate(reader, 1):
                     if idx > 5:
                         break
-                    with st.container():
-                        col1, col2 = st.columns([1, 2])
-                        with col1:
-                            st.markdown(f"**正面**")
-                            st.info(row.get('Front', ''))
-                        with col2:
-                            st.markdown(f"**背面**")
-                            st.success(row.get('Back', ''))
-                        if idx < 5 and idx < card_count:
-                            st.markdown("---")
+                    
+                    col1, col2 = st.columns([1, 2])
+                    with col1:
+                        st.markdown(f"**正面**")
+                        st.info(row.get('Front', ''))
+                    with col2:
+                        st.markdown(f"**背面**")
+                        st.success(row.get('Back', ''))
+                    if idx < 5 and idx < card_count:
+                        st.markdown("---")
 
         with tab2:
             st.markdown("**完整 CSV 內容（可直接複製匯入 Anki/Quizlet）：**")
@@ -496,6 +575,7 @@ if st.button("Start Analysis 🚀"):
                 height=400,
                 label_visibility="collapsed"
             )
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # Download Button
         col1, col2, col3 = st.columns([1, 1, 2])
