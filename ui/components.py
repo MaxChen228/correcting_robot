@@ -197,3 +197,84 @@ def render_flashcards_section(flashcards_csv: str):
         mime="text/csv",
         use_container_width=True
     )
+
+
+def render_history_page(history_records: list):
+    """
+    Render history archive page
+
+    Args:
+        history_records: List of history records from database
+    """
+    st.markdown('<h2 style="text-align: center;">Correction Archive</h2>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if not history_records:
+        st.info("No history records found.")
+        return
+
+    # Back button
+    if st.button("← BACK TO MAIN", use_container_width=True):
+        st.session_state.show_history = False
+        st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Display each history record
+    for idx, record in enumerate(history_records, 1):
+        timestamp = record.get('timestamp', 'Unknown')
+        corrections = record.get('corrections', [])
+        flashcards = record.get('flashcards', '')
+
+        # Format timestamp
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            formatted_time = dt.strftime('%Y-%m-%d %H:%M')
+        except:
+            formatted_time = timestamp
+
+        # Expandable section for each record
+        with st.expander(f"📝 Record #{idx} - {formatted_time}", expanded=(idx == 1)):
+            # Show corrections
+            if corrections:
+                st.markdown("### Corrections")
+                for item in corrections:
+                    question_id = item.get('id', '')
+                    user_text = item.get('user', '')
+                    correction_text = item.get('correction', '')
+                    feedback = item.get('feedback', '')
+
+                    st.markdown(f"**NO. {question_id}**")
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("*Original*")
+                        st.text(user_text)
+                    with col2:
+                        st.markdown("*Correction*")
+                        st.text(correction_text)
+
+                    if isinstance(feedback, list):
+                        st.markdown("*Notes:*")
+                        for point in feedback:
+                            st.markdown(f"- {point}")
+                    elif feedback:
+                        st.markdown(f"*Note:* {feedback}")
+
+                    st.markdown("---")
+
+            # Show flashcards count
+            if flashcards:
+                lines = flashcards.strip().split('\n')
+                card_count = max(0, len(lines) - 1)
+                st.markdown(f"### Flashcards ({card_count} cards)")
+
+                # Download button for this record
+                st.download_button(
+                    label="Download CSV",
+                    data=flashcards,
+                    file_name=f"flashcards_{formatted_time.replace(' ', '_')}.csv",
+                    mime="text/csv",
+                    key=f"download_{idx}"
+                )

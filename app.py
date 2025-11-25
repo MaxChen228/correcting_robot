@@ -13,7 +13,8 @@ from ui.components import (
     render_file_upload_section,
     render_sidebar_settings,
     render_correction_results,
-    render_flashcards_section
+    render_flashcards_section,
+    render_history_page
 )
 from agents import transcription, correction, flashcards
 
@@ -42,6 +43,13 @@ def main():
 
     # Sidebar history info
     db.render_sidebar_info()
+
+    # Check if user wants to view history
+    if st.session_state.get('show_history', False):
+        # Show history page
+        history_records = db.get_all_history()
+        render_history_page(history_records)
+        return
 
     # File upload section
     user_images, answer_image = render_file_upload_section()

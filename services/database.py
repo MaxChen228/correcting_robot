@@ -76,6 +76,24 @@ class DatabaseService:
         except Exception:
             return 0
 
+    def get_all_history(self) -> list:
+        """
+        Get all correction history records
+
+        Returns:
+            List of history records, empty list if error
+        """
+        if not self.is_connected():
+            return []
+
+        try:
+            response = self.client.table("correction_history").select("*").order("created_at", desc=True).execute()
+            return response.data if response.data else []
+
+        except Exception as e:
+            st.error(f"Failed to load history: {e}")
+            return []
+
     def render_sidebar_info(self):
         """Render database info in sidebar"""
         st.sidebar.markdown("### History")
