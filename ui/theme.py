@@ -85,26 +85,48 @@ def apply_custom_theme():
         margin-top: 1rem;
     }
 
-    /* Custom Button Styling - Minimalist */
+    /* Custom Button Styling - Enhanced */
     .stButton > button {
-        background: transparent;
+        background: rgba(30, 30, 30, 0.8);
         color: var(--text-primary);
         border: 1px solid var(--border-color);
-        border-radius: 4px;
-        padding: 0.6rem 1.5rem;
+        border-radius: 6px;
+        padding: 0.7rem 1.8rem;
         font-family: 'Space Mono', monospace;
         font-size: 0.8rem;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        transition: all 0.3s ease;
+        letter-spacing: 0.12em;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        position: relative;
+        overflow: hidden;
     }
+
+    .stButton > button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        transition: left 0.5s;
+    }
+
+    .stButton > button:hover::before {
+        left: 100%;
+    }
+
     .stButton > button:hover {
-        background: var(--text-primary);
-        color: var(--bg-color);
-        border-color: var(--text-primary);
+        background: rgba(50, 50, 50, 0.9);
+        border-color: #555;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        transform: translateY(-2px);
     }
+
     .stButton > button:active {
-        transform: translateY(1px);
+        transform: translateY(0px);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
     /* File Uploader Styling */
@@ -135,18 +157,57 @@ def apply_custom_theme():
 
     /* Card Styling for Corrections */
     .correction-card {
-        background: transparent;
-        border-left: 1px solid var(--border-color);
-        padding: 0 0 0 20px;
-        margin-bottom: 40px;
+        background: rgba(18, 18, 18, 0.6);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3),
+                    0 1px 3px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .correction-card:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4),
+                    0 2px 4px rgba(0, 0, 0, 0.3);
+        border-color: #444;
     }
 
     /* Status Container */
     .stStatus {
-        background: transparent !important;
+        background: rgba(18, 18, 18, 0.5) !important;
         border: 1px solid var(--border-color) !important;
-        border-radius: 0px !important;
+        border-radius: 6px !important;
         font-family: 'Space Mono', monospace !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Expander Styling */
+    .streamlit-expanderHeader {
+        background: rgba(25, 25, 25, 0.8);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 12px 16px;
+        transition: all 0.3s ease;
+    }
+
+    .streamlit-expanderHeader:hover {
+        background: rgba(35, 35, 35, 0.9);
+        border-color: #444;
+    }
+
+    .streamlit-expanderContent {
+        background: rgba(15, 15, 15, 0.6);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        padding: 20px;
+        margin-top: -1px;
+    }
+
+    /* Container Borders */
+    .stContainer {
+        border-radius: 6px;
     }
 
     /* Sidebar Styling */

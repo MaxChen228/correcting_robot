@@ -56,9 +56,9 @@ def main():
         # Show info and clear button
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.info("📋 Displaying restored record from history")
+            st.info("Displaying restored record from history")
         with col2:
-            if st.button("✖ Clear", use_container_width=True):
+            if st.button("Clear", use_container_width=True):
                 st.session_state.restored_corrections = None
                 st.session_state.restored_flashcards = None
                 st.rerun()

@@ -99,47 +99,58 @@ def render_correction_results(correction_data, show_title: bool = True):
             correction_text = item.get('correction', '')
             feedback = item.get('feedback', '')
 
-            # Custom Card Container
-            st.markdown(f"""
-            <div class="correction-card">
-                <h3 style="color: #666; margin-bottom: 1rem;">NO. {question_id}</h3>
-            </div>
+            # Wrapper with inline card styling
+            st.markdown("""
+            <div style="
+                background: rgba(18, 18, 18, 0.6);
+                border: 1px solid #333;
+                border-radius: 8px;
+                padding: 24px;
+                margin-bottom: 32px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+            ">
             """, unsafe_allow_html=True)
 
-            with st.container():
-                col1, col2 = st.columns(2)
+            # Card header
+            st.markdown(f"""
+                <h3 style="color: #888; margin-bottom: 1.5rem; font-family: 'Space Mono', monospace; font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase;">
+                    NO. {question_id}
+                </h3>
+            """, unsafe_allow_html=True)
 
-                with col1:
-                    st.markdown("**Original**")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**Original**")
+                st.markdown(
+                    f"<p style='font-family: Inter; color: #ccc; line-height: 1.6;'>{user_text}</p>",
+                    unsafe_allow_html=True
+                )
+
+            with col2:
+                st.markdown("**Correction**")
+                st.markdown(
+                    f"<p style='font-family: Inter; color: #fff; line-height: 1.6;'>{correction_text}</p>",
+                    unsafe_allow_html=True
+                )
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("**Notes**")
+
+            # Handle feedback as list or string
+            if isinstance(feedback, list):
+                for point in feedback:
                     st.markdown(
-                        f"<p style='font-family: Inter; color: #ccc; line-height: 1.6;'>{user_text}</p>",
+                        f"<p style='font-family: Cormorant Garamond; font-style: italic; color: #aaa; margin-bottom: 0.5rem;'>— {point}</p>",
                         unsafe_allow_html=True
                     )
+            else:
+                st.markdown(
+                    f"<p style='font-family: Cormorant Garamond; font-style: italic; color: #aaa;'>— {feedback}</p>",
+                    unsafe_allow_html=True
+                )
 
-                with col2:
-                    st.markdown("**Correction**")
-                    st.markdown(
-                        f"<p style='font-family: Inter; color: #fff; line-height: 1.6;'>{correction_text}</p>",
-                        unsafe_allow_html=True
-                    )
-
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown("**Notes**")
-
-                # Handle feedback as list or string
-                if isinstance(feedback, list):
-                    for point in feedback:
-                        st.markdown(
-                            f"<p style='font-family: Cormorant Garamond; font-style: italic; color: #aaa; margin-bottom: 0.5rem;'>— {point}</p>",
-                            unsafe_allow_html=True
-                        )
-                else:
-                    st.markdown(
-                        f"<p style='font-family: Cormorant Garamond; font-style: italic; color: #aaa;'>— {feedback}</p>",
-                        unsafe_allow_html=True
-                    )
-
-                st.markdown("<hr style='border-top: 1px solid #333; margin: 2rem 0;'>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Parsing Error: {e}")
@@ -245,11 +256,11 @@ def render_history_page(history_records: list):
             formatted_time = timestamp
 
         # Expandable section for each record
-        with st.expander(f"📝 Record #{idx} - {formatted_time}", expanded=(idx == 1)):
+        with st.expander(f"Record #{idx} - {formatted_time}", expanded=(idx == 1)):
             # Restore button
             col_restore, col_spacer = st.columns([1, 3])
             with col_restore:
-                if st.button("🔄 Restore this record", key=f"restore_{record_id}", use_container_width=True):
+                if st.button("Restore this record", key=f"restore_{record_id}", use_container_width=True):
                     st.session_state.restored_corrections = corrections
                     st.session_state.restored_flashcards = flashcards
                     st.session_state.show_history = False
