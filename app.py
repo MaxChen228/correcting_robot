@@ -51,6 +51,23 @@ def main():
         render_history_page(history_records)
         return
 
+    # Check if there's a restored record to display
+    if st.session_state.get('restored_corrections') and st.session_state.get('restored_flashcards'):
+        # Show info and clear button
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.info("📋 Displaying restored record from history")
+        with col2:
+            if st.button("✖ Clear", use_container_width=True):
+                st.session_state.restored_corrections = None
+                st.session_state.restored_flashcards = None
+                st.rerun()
+
+        # Display restored results
+        render_correction_results(st.session_state.restored_corrections)
+        render_flashcards_section(st.session_state.restored_flashcards)
+        return
+
     # File upload section
     user_images, answer_image = render_file_upload_section()
 

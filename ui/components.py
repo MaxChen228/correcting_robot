@@ -73,19 +73,25 @@ def render_sidebar_settings() -> tuple[Optional[str], bool]:
     return api_key, debug_mode
 
 
-def render_correction_results(correction_json: str):
+def render_correction_results(correction_data, show_title: bool = True):
     """
     Render correction results in card format
 
     Args:
-        correction_json: JSON string of correction results
+        correction_data: JSON string or list/dict of correction results
+        show_title: Whether to show the title (default: True)
     """
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown('<h2 style="text-align: center;">Analysis Report</h2>', unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
+    if show_title:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown('<h2 style="text-align: center;">Analysis Report</h2>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
 
     try:
-        data = json.loads(correction_json)
+        # Handle both JSON string and direct data
+        if isinstance(correction_data, str):
+            data = json.loads(correction_data)
+        else:
+            data = correction_data
 
         for idx, item in enumerate(data, 1):
             question_id = item.get('id', f'{idx:02d}')
@@ -139,15 +145,18 @@ def render_correction_results(correction_json: str):
         st.error(f"Parsing Error: {e}")
 
 
-def render_flashcards_section(flashcards_csv: str):
+def render_flashcards_section(flashcards_csv: str, show_title: bool = True, download_filename: str = "flashcards.csv"):
     """
     Render flashcards preview and download section
 
     Args:
         flashcards_csv: CSV string of flashcards
+        show_title: Whether to show the title (default: True)
+        download_filename: Filename for download button (default: "flashcards.csv")
     """
-    st.markdown('<h2 style="text-align: center;">Study Cards</h2>', unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
+    if show_title:
+        st.markdown('<h2 style="text-align: center;">Study Cards</h2>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
 
     lines = flashcards_csv.strip().split('\n')
 
@@ -193,7 +202,7 @@ def render_flashcards_section(flashcards_csv: str):
     st.download_button(
         label="DOWNLOAD CSV",
         data=flashcards_csv,
-        file_name="flashcards.csv",
+        file_name=download_filename,
         mime="text/csv",
         use_container_width=True
     )
@@ -225,6 +234,7 @@ def render_history_page(history_records: list):
         timestamp = record.get('timestamp', 'Unknown')
         corrections = record.get('corrections', [])
         flashcards = record.get('flashcards', '')
+        record_id = record.get('id', idx)
 
         # Format timestamp
         try:
@@ -236,45 +246,24 @@ def render_history_page(history_records: list):
 
         # Expandable section for each record
         with st.expander(f"📝 Record #{idx} - {formatted_time}", expanded=(idx == 1)):
-            # Show corrections
+            # Restore button
+            col_restore, col_spacer = st.columns([1, 3])
+            with col_restore:
+                if st.button("🔄 Restore this record", key=f"restore_{record_id}", use_container_width=True):
+                    st.session_state.restored_corrections = corrections
+                    st.session_state.restored_flashcards = flashcards
+                    st.session_state.show_history = False
+                    st.rerun()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Use shared rendering functions
             if corrections:
-                st.markdown("### Corrections")
-                for item in corrections:
-                    question_id = item.get('id', '')
-                    user_text = item.get('user', '')
-                    correction_text = item.get('correction', '')
-                    feedback = item.get('feedback', '')
+                render_correction_results(corrections, show_title=False)
 
-                    st.markdown(f"**NO. {question_id}**")
-
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown("*Original*")
-                        st.text(user_text)
-                    with col2:
-                        st.markdown("*Correction*")
-                        st.text(correction_text)
-
-                    if isinstance(feedback, list):
-                        st.markdown("*Notes:*")
-                        for point in feedback:
-                            st.markdown(f"- {point}")
-                    elif feedback:
-                        st.markdown(f"*Note:* {feedback}")
-
-                    st.markdown("---")
-
-            # Show flashcards count
             if flashcards:
-                lines = flashcards.strip().split('\n')
-                card_count = max(0, len(lines) - 1)
-                st.markdown(f"### Flashcards ({card_count} cards)")
-
-                # Download button for this record
-                st.download_button(
-                    label="Download CSV",
-                    data=flashcards,
-                    file_name=f"flashcards_{formatted_time.replace(' ', '_')}.csv",
-                    mime="text/csv",
-                    key=f"download_{idx}"
+                render_flashcards_section(
+                    flashcards,
+                    show_title=False,
+                    download_filename=f"flashcards_{formatted_time.replace(' ', '_').replace(':', '-')}.csv"
                 )
