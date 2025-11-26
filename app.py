@@ -149,7 +149,7 @@ def run_analysis_pipeline(user_images, answer_image, debug_mode, db):
             pass  # Silent fail for elegance
 
     # --- Display Results ---
-    render_correction_results(correction_result)
+    render_correction_results(transcription_result, correction_result)
     render_flashcards_section(flashcards_result)
 
 

@@ -73,21 +73,38 @@ def render_sidebar_settings() -> tuple[Optional[str], bool]:
     return api_key, debug_mode
 
 
-def render_correction_results(correction_data, show_title: bool = True):
+def render_correction_results(transcription_data=None, correction_data=None, show_title: bool = True):
     """
-    Render correction results in card format
+    Render correction results in 3-column stacked layout
 
     Args:
-        correction_data: JSON string or list/dict of correction results
+        transcription_data: JSON string or list/dict with {id, user, standard} from Agent 1
+        correction_data: JSON string or list/dict with {id, user, correction, feedback} from Agent 2
         show_title: Whether to show the title (default: True)
+
+    Note: For backward compatibility, if only one argument is passed, it's treated as correction_data
     """
+    # Backward compatibility: if transcription_data looks like correction data, swap them
+    if transcription_data is not None and correction_data is None:
+        correction_data = transcription_data
+        transcription_data = None
     if show_title:
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown('<h2 style="text-align: center;">Analysis Report</h2>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
     try:
-        # Handle both JSON string and direct data
+        # Parse transcription data (Agent 1: {id, user, standard})
+        transcription_dict = {}
+        if transcription_data:
+            if isinstance(transcription_data, str):
+                trans_list = json.loads(transcription_data)
+            else:
+                trans_list = transcription_data
+            # Build lookup dict by id
+            transcription_dict = {item.get('id'): item for item in trans_list}
+
+        # Parse correction data (Agent 2: {id, user, correction, feedback})
         if isinstance(correction_data, str):
             data = json.loads(correction_data)
         else:
@@ -99,75 +116,88 @@ def render_correction_results(correction_data, show_title: bool = True):
             correction_text = item.get('correction', '')
             feedback = item.get('feedback', '')
 
-            # Wrapper with inline card styling
+            # Get standard from transcription data
+            standard_text = ''
+            if question_id in transcription_dict:
+                standard_text = transcription_dict[question_id].get('standard', '')
+
+            # Card wrapper - Sharp corners style
             st.markdown("""
-            <div class="correction-card-enhanced" style="
+            <div class="correction-card-sharp" style="
                 background: rgba(18, 18, 18, 0.6);
                 border: 1px solid #333;
-                border-radius: 8px;
+                border-radius: 0;
                 padding: 24px;
                 margin-bottom: 32px;
-                position: relative;
-                overflow: hidden;
-                box-shadow:
-                    0 4px 6px rgba(0, 0, 0, 0.3),
-                    0 1px 3px rgba(0, 0, 0, 0.2),
-                    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
-                transition:
-                    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-                    box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                    border-color 0.35s ease;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                transition: all 0.3s ease;
             ">
             """, unsafe_allow_html=True)
 
-            # Card header with gradient separator
+            # Card header
             st.markdown(f"""
-                <div style="position: relative; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                <div class="card-header" style="
+                    padding-bottom: 1rem;
+                    margin-bottom: 1.5rem;
+                    border-bottom: 1px solid #333;
+                ">
                     <h3 style="
                         color: #888;
                         font-family: 'Space Mono', monospace;
-                        font-size: 0.9rem;
-                        letter-spacing: 0.1em;
+                        font-size: 0.85rem;
+                        letter-spacing: 0.15em;
                         text-transform: uppercase;
                         margin: 0;
                     ">NO. {question_id}</h3>
-                    <div style="
-                        height: 1px;
-                        background: linear-gradient(90deg, transparent 0%, #333 10%, #555 50%, #333 90%, transparent 100%);
-                        margin-top: 0.75rem;
-                    "></div>
                 </div>
             """, unsafe_allow_html=True)
 
+            # Upper section: User | Standard (small text, secondary color)
             col1, col2 = st.columns(2)
 
             with col1:
-                st.markdown("**Original**")
+                st.markdown('<p style="font-family: Space Mono; font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">USER WRITING</p>', unsafe_allow_html=True)
                 st.markdown(
-                    f"<p style='font-family: Inter; color: #ccc; line-height: 1.6;'>{user_text}</p>",
+                    f"<p class='text-small text-secondary' style='font-family: Inter; font-size: 0.85rem; color: #999; line-height: 1.5;'>{user_text}</p>",
                     unsafe_allow_html=True
                 )
 
             with col2:
-                st.markdown("**Correction**")
+                st.markdown('<p style="font-family: Space Mono; font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">STANDARD ANSWER</p>', unsafe_allow_html=True)
                 st.markdown(
-                    f"<p style='font-family: Inter; color: #fff; line-height: 1.6;'>{correction_text}</p>",
+                    f"<p class='text-small text-secondary' style='font-family: Inter; font-size: 0.85rem; color: #999; line-height: 1.5;'>{standard_text}</p>",
                     unsafe_allow_html=True
                 )
 
+            # Divider
+            st.markdown("""
+                <div class="divider" style="
+                    height: 1px;
+                    background: linear-gradient(90deg, transparent 0%, #444 10%, #444 90%, transparent 100%);
+                    margin: 1.5rem 0;
+                "></div>
+            """, unsafe_allow_html=True)
+
+            # Lower section: Correction (large text, primary color, emphasis)
+            st.markdown('<p style="font-family: Space Mono; font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">CORRECTION</p>', unsafe_allow_html=True)
+            st.markdown(
+                f"<p class='text-large text-primary' style='font-family: Inter; font-size: 1.1rem; color: #e0e0e0; line-height: 1.7; font-weight: 500;'>{correction_text}</p>",
+                unsafe_allow_html=True
+            )
+
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("**Notes**")
+            st.markdown('<p style="font-family: Space Mono; font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">NOTES</p>', unsafe_allow_html=True)
 
             # Handle feedback as list or string
             if isinstance(feedback, list):
                 for point in feedback:
                     st.markdown(
-                        f"<p style='font-family: Cormorant Garamond; font-style: italic; color: #aaa; margin-bottom: 0.5rem;'>— {point}</p>",
+                        f"<p class='note-item' style='font-family: Cormorant Garamond; font-style: italic; color: #aaa; margin-bottom: 0.5rem; padding-left: 0.5rem; border-left: 2px solid #333;'>— {point}</p>",
                         unsafe_allow_html=True
                     )
             else:
                 st.markdown(
-                    f"<p style='font-family: Cormorant Garamond; font-style: italic; color: #aaa;'>— {feedback}</p>",
+                    f"<p class='note-item' style='font-family: Cormorant Garamond; font-style: italic; color: #aaa; padding-left: 0.5rem; border-left: 2px solid #333;'>— {feedback}</p>",
                     unsafe_allow_html=True
                 )
 
@@ -201,23 +231,16 @@ def render_flashcards_section(flashcards_csv: str, show_title: bool = True, down
                 if idx > 6:  # Show only first 6 cards
                     break
 
-                # Flashcard item wrapper
+                # Flashcard item wrapper - Sharp corners
                 st.markdown("""
                 <div class="flashcard-item" style="
                     padding: 1.5rem;
                     border: 1px solid #222;
-                    border-radius: 6px;
+                    border-radius: 0;
                     margin-bottom: 1.5rem;
-                    background: linear-gradient(135deg, rgba(18,18,18,0.4) 0%, rgba(15,15,15,0.3) 100%);
-                    position: relative;
-                    overflow: hidden;
-                    transition:
-                        border-color 0.3s ease,
-                        box-shadow 0.3s ease,
-                        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    box-shadow:
-                        inset 0 0 0 1px rgba(255,255,255,0.01),
-                        0 2px 4px rgba(0,0,0,0.2);
+                    background: rgba(18, 18, 18, 0.4);
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                    transition: all 0.3s ease;
                 ">
                 """, unsafe_allow_html=True)
 
