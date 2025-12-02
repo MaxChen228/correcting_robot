@@ -98,6 +98,27 @@ class DatabaseService:
             st.error(f"Failed to load history: {e}")
             return []
 
+    def update_record_name(self, record_id: int, new_name: str) -> bool:
+        """
+        Update the name of a correction record
+        
+        Args:
+            record_id: The ID of the record to update
+            new_name: The new name for the record
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.is_connected():
+            return False
+            
+        try:
+            self.client.table("correction_history").update({"name": new_name}).eq("id", record_id).execute()
+            return True
+        except Exception as e:
+            st.error(f"Failed to update record name: {e}")
+            return False
+
     def render_sidebar_info(self):
         """Render database info in sidebar"""
         st.sidebar.markdown("### History")

@@ -178,20 +178,16 @@ correcting_robot/
 ### 核心流程
 
 ```python
-# 1. 辨識手寫 + 對齊標準答案
+# 1. Agent 1 (Transcription): Digitizes handwriting and aligns with standard answers.
 transcription_result = agent_transcription(user_images, answer_image)
 
-# 2. 深度批改
+# 2. Agent 2 (Correction): Analyzes errors and provides detailed feedback.
 correction_result = agent_correction(transcription_result)
 
-# 3. 生成單字卡
-flashcards_result = agent_flashcards(correction_result)
-
-# 4. 自動保存到 Supabase
+# 3. 自動保存到 Supabase
 supabase.table("correction_history").insert({
     "timestamp": datetime.now().isoformat(),
     "corrections": correction_data,
-    "flashcards": flashcards_result
 }).execute()
 ```
 

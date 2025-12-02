@@ -25,7 +25,7 @@ create table correction_history (
   created_at timestamptz default now(),
   timestamp text,
   corrections jsonb,
-  flashcards text
+  name text
 );
 ```
 

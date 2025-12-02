@@ -409,6 +409,9 @@ def render_history_page(history_records: list):
     """
     Render history archive page with Timeline Style (Plan A)
     """
+    from services.database import DatabaseService
+    db = DatabaseService()
+
     st.markdown('<h2 style="text-align: center; border: none; margin-bottom: 40px;">Correction Archive</h2>', unsafe_allow_html=True)
 
     if not history_records:
@@ -429,8 +432,11 @@ def render_history_page(history_records: list):
         timestamp = record.get('timestamp', 'Unknown')
         transcriptions = record.get('transcriptions', [])
         corrections = record.get('corrections', [])
-        flashcards = record.get('flashcards', '')
         record_id = record.get('id', idx)
+        record_name = record.get('name') 
+        
+        # Default name logic
+        display_name = record_name if record_name else f"Record #{record_id}"
 
         # Format timestamp
         try:
@@ -444,18 +450,14 @@ def render_history_page(history_records: list):
 
         # Calculate stats
         correction_count = len(corrections) if corrections else 0
-        flashcard_count = len(flashcards.strip().split('\n')) - 1 if flashcards else 0
-        flashcard_count = max(0, flashcard_count)
 
         # Timeline Layout: Col1 (Line) | Col2 (Content)
-        # Adjusted ratio for better spacing
         col1, col2 = st.columns([0.8, 11])
 
         with col1:
             # Visual Timeline Line & Dot
-            # Using a gradient line for elegance
             is_last = idx == len(history_records)
-            line_height = "100%" # if not is_last else "50%"
+            line_height = "100%" 
             
             st.markdown(clean_html(f"""
                 <div style="
@@ -488,58 +490,79 @@ def render_history_page(history_records: list):
                     <!-- Date & Time -->
                     <div style="
                         font-family: 'Space Mono', monospace;
-                        color: #e0e0e0;
-                        font-size: 1.2rem;
+                        color: #666;
+                        font-size: 0.85rem;
                         letter-spacing: 0.05em;
                         display: flex;
                         align-items: baseline;
                         gap: 15px;
-                        margin-bottom: 8px;
+                        margin-bottom: 4px;
                     ">
                         <span>{date_str}</span>
                         <span style="
-                            font-size: 0.85rem; 
-                            color: #666; 
                             border-left: 1px solid #333; 
                             padding-left: 15px;
                         ">{time_str}</span>
                     </div>
-                    
-                    <!-- Stats / Summary -->
-                    <div style="
-                        font-family: 'Inter', sans-serif;
-                        color: #888;
-                        font-size: 0.9rem;
-                        margin-bottom: 20px;
-                        display: flex;
-                        gap: 25px;
-                    ">
-                        <span style="display: flex; align-items: center; gap: 8px;">
-                            <span style="
-                                display: inline-block; width: 6px; height: 6px; 
-                                background: #4a8; border-radius: 50%; opacity: 0.7;
-                            "></span>
-                            <span style="color: #ccc;">{correction_count}</span> Corrections
-                        </span>
-                        <span style="display: flex; align-items: center; gap: 8px;">
-                            <span style="
-                                display: inline-block; width: 6px; height: 6px; 
-                                background: #a84; border-radius: 50%; opacity: 0.7;
-                            "></span>
-                            <span style="color: #ccc;">{flashcard_count}</span> Flashcards
-                        </span>
-                    </div>
-                </div>
             """), unsafe_allow_html=True)
+
+            # Editable Title Section
+            # We use a unique key for each record's edit state
+            edit_key = f"edit_mode_{record_id}"
+            
+            # Header Row
+            h_col1, h_col2 = st.columns([8, 2])
+            with h_col1:
+                if st.session_state.get(edit_key, False):
+                    # Edit Mode
+                    new_val = st.text_input(
+                        "Name", 
+                        value=display_name, 
+                        key=f"input_{record_id}", 
+                        label_visibility="collapsed"
+                    )
+                else:
+                    # View Mode
+                    st.markdown(f"""
+                        <h3 style="
+                            font-family: 'Cormorant Garamond', serif;
+                            font-size: 1.6rem;
+                            color: #e0e0e0;
+                            margin: 0;
+                            font-weight: 400;
+                            letter-spacing: 0.02em;
+                        ">{display_name}</h3>
+                    """, unsafe_allow_html=True)
+            
+            with h_col2:
+                if st.session_state.get(edit_key, False):
+                    # Edit Actions: Save (Primary) / Cancel (Secondary)
+                    b_col1, b_col2 = st.columns(2)
+                    with b_col1:
+                        if st.button("✓", key=f"save_{record_id}", type="primary"):
+                            if db.update_record_name(record_id, new_val):
+                                st.session_state[edit_key] = False
+                                st.rerun()
+                    with b_col2:
+                        if st.button("✗", key=f"cancel_{record_id}", type="secondary"):
+                            st.session_state[edit_key] = False
+                            st.rerun()
+                else:
+                    # Edit Button (Secondary - Minimal)
+                    if st.button("edit", key=f"edit_btn_{record_id}", type="secondary"):
+                        st.session_state[edit_key] = True
+                        st.rerun()
+
+            # Spacer (Stats removed)
+            st.markdown('<div style="margin-bottom: 20px;"></div>', unsafe_allow_html=True)
 
             # Action Buttons - Nested inside the content column to align with text
             c1, c2 = st.columns([2.5, 8])
             with c1:
                 st.markdown('<div class="restore-button-wrapper">', unsafe_allow_html=True)
-                if st.button("RESTORE", key=f"restore_{record_id}", use_container_width=True):
+                if st.button("RESTORE", key=f"restore_{record_id}", type="primary", use_container_width=True):
                     st.session_state.restored_transcriptions = transcriptions
                     st.session_state.restored_corrections = corrections
-                    st.session_state.restored_flashcards = flashcards
                     st.session_state.show_history = False
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
@@ -548,43 +571,5 @@ def render_history_page(history_records: list):
                 with st.expander("VIEW DETAILS"):
                     if corrections:
                         render_correction_results(transcriptions, corrections, show_title=False)
-                    
-                    if flashcards:
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        # We need to import render_flashcards_section here or pass it in
-                        # Assuming it's available or we skip it if not imported.
-                        # Based on file content, render_flashcards_section wasn't in the previous view_file output of components.py
-                        # But it was called in the original code. Let's check imports.
-                        # It seems render_flashcards_section might be missing from the file I read or I missed it.
-                        # I will comment it out for now to avoid errors if it's not there, 
-                        # or assume it's imported if the original code had it.
-                        # The original code had: render_flashcards_section
-                        # Let's assume it is defined in components.py but I missed reading it (I read 529 lines).
-                        # Wait, I read the whole file and it ended at line 529. 
-                        # render_flashcards_section was CALLED at line 524 but NOT DEFINED in the file I read?
-                        # Ah, I might have missed an import or it's defined further down?
-                        # No, I read the whole file.
-                        # Let me check the imports in components.py again.
-                        # It imports: from config.settings import Config
-                        # It does NOT import render_flashcards_section.
-                        # Maybe it is defined in components.py?
-                        # I will check if I missed reading part of the file.
-                        # The file view said "Showing lines 1 to 529".
-                        # And the last function was render_history_page.
-                        # Where is render_flashcards_section?
-                        # It was called in line 524: render_flashcards_section(...)
-                        # If it's not defined, the code would crash.
-                        # Maybe it was imported inside the function? No.
-                        # Maybe I missed it in the file view?
-                        # I will assume it is there or I should not break it.
-                        # I will keep the call as is.
-                        try:
-                            from ui.components import render_flashcards_section
-                            render_flashcards_section(
-                                flashcards,
-                                show_title=False,
-                                download_filename=f"flashcards_{date_str}_{time_str.replace(':', '')}.csv"
-                            )
-                        except ImportError:
-                             st.write(flashcards)
+
 
