@@ -101,10 +101,8 @@ def apply_custom_theme():
         margin-top: 1rem;
     }
 
-    /* Custom Button Styling */
-    
-    /* Primary Button (Boxed - e.g., RESTORE, SAVE) */
-    .stButton > button[kind="primary"] {
+    /* Custom Button Styling - Sharp Corners */
+    .stButton > button {
         background: rgba(30, 30, 30, 0.8);
         color: var(--text-primary);
         border: 1px solid var(--border-color);
@@ -120,38 +118,31 @@ def apply_custom_theme():
         overflow: hidden;
     }
 
-    .stButton > button[kind="primary"]:hover {
+    .stButton > button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        transition: left 0.5s;
+    }
+
+    .stButton > button:hover::before {
+        left: 100%;
+    }
+
+    .stButton > button:hover {
         background: rgba(50, 50, 50, 0.9);
         border-color: #555;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         transform: translateY(-2px);
     }
 
-    .stButton > button[kind="primary"]:active {
+    .stButton > button:active {
         transform: translateY(0px);
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Secondary Button (Minimal - e.g., Edit, Cancel) */
-    .stButton > button[kind="secondary"] {
-        background: transparent;
-        color: #666;
-        border: none;
-        padding: 0.2rem 0.5rem;
-        font-family: 'Space Mono', monospace;
-        font-size: 0.8rem;
-        transition: all 0.2s ease;
-    }
-
-    .stButton > button[kind="secondary"]:hover {
-        color: #e0e0e0;
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .stButton > button[kind="secondary"]:focus {
-        color: #e0e0e0;
-        box-shadow: none;
-        outline: none;
     }
 
     /* Restore button special styling */

@@ -442,8 +442,13 @@ def render_history_page(history_records: list):
         try:
             from datetime import datetime
             dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            date_str = dt.strftime('%Y-%m-%d')
-            time_str = dt.strftime('%H:%M')
+            # Convert UTC to local time for display
+            if dt.tzinfo is not None:
+                dt_local = dt.astimezone()
+            else:
+                dt_local = dt
+            date_str = dt_local.strftime('%Y-%m-%d')
+            time_str = dt_local.strftime('%H:%M')
         except:
             date_str = timestamp
             time_str = ""
@@ -511,15 +516,25 @@ def render_history_page(history_records: list):
             edit_key = f"edit_mode_{record_id}"
             
             # Header Row
-            h_col1, h_col2 = st.columns([8, 2])
+            h_col1, h_col2 = st.columns([8, 1])
             with h_col1:
                 if st.session_state.get(edit_key, False):
                     # Edit Mode
-                    new_val = st.text_input(
+                    def on_save_name():
+                        new_val = st.session_state[f"input_{record_id}"]
+                        if db.update_record_name(record_id, new_val):
+                            st.session_state[edit_key] = False
+                            # We might need to reload history, but for now let's just rerun
+                            # Ideally we should update the local record list too or force a reload
+                            # Since we can't easily force a reload of the parent's data fetch from here without a callback,
+                            # we rely on st.rerun() which re-runs the whole app and fetches fresh data.
+                        
+                    st.text_input(
                         "Name", 
                         value=display_name, 
                         key=f"input_{record_id}", 
-                        label_visibility="collapsed"
+                        label_visibility="collapsed",
+                        on_change=on_save_name
                     )
                 else:
                     # View Mode
@@ -535,32 +550,40 @@ def render_history_page(history_records: list):
                     """, unsafe_allow_html=True)
             
             with h_col2:
-                if st.session_state.get(edit_key, False):
-                    # Edit Actions: Save (Primary) / Cancel (Secondary)
-                    b_col1, b_col2 = st.columns(2)
-                    with b_col1:
-                        if st.button("✓", key=f"save_{record_id}", type="primary"):
-                            if db.update_record_name(record_id, new_val):
-                                st.session_state[edit_key] = False
-                                st.rerun()
-                    with b_col2:
-                        if st.button("✗", key=f"cancel_{record_id}", type="secondary"):
-                            st.session_state[edit_key] = False
-                            st.rerun()
-                else:
-                    # Edit Button (Secondary - Minimal)
-                    if st.button("edit", key=f"edit_btn_{record_id}", type="secondary"):
+                # Edit Button
+                if not st.session_state.get(edit_key, False):
+                    if st.button("✎", key=f"edit_btn_{record_id}"):
                         st.session_state[edit_key] = True
                         st.rerun()
 
-            # Spacer (Stats removed)
-            st.markdown('<div style="margin-bottom: 20px;"></div>', unsafe_allow_html=True)
+            # Stats
+            st.markdown(clean_html(f"""
+                    <!-- Stats / Summary -->
+                    <div style="
+                        font-family: 'Inter', sans-serif;
+                        color: #888;
+                        font-size: 0.9rem;
+                        margin-top: 8px;
+                        margin-bottom: 20px;
+                        display: flex;
+                        gap: 25px;
+                    ">
+                        <span style="display: flex; align-items: center; gap: 8px;">
+                            <span style="
+                                display: inline-block; width: 6px; height: 6px; 
+                                background: #4a8; border-radius: 50%; opacity: 0.7;
+                            "></span>
+                            <span style="color: #ccc;">{correction_count}</span> Corrections
+                        </span>
+                    </div>
+                </div>
+            """), unsafe_allow_html=True)
 
             # Action Buttons - Nested inside the content column to align with text
             c1, c2 = st.columns([2.5, 8])
             with c1:
                 st.markdown('<div class="restore-button-wrapper">', unsafe_allow_html=True)
-                if st.button("RESTORE", key=f"restore_{record_id}", type="primary", use_container_width=True):
+                if st.button("RESTORE", key=f"restore_{record_id}", use_container_width=True):
                     st.session_state.restored_transcriptions = transcriptions
                     st.session_state.restored_corrections = corrections
                     st.session_state.show_history = False

@@ -4,7 +4,7 @@ Supabase 雲端儲存管理
 """
 import streamlit as st
 from supabase import create_client, Client
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import json
 
@@ -52,7 +52,7 @@ class DatabaseService:
 
         try:
             history_entry = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "corrections": correction_data,
                 "transcriptions": transcription_data
             }
