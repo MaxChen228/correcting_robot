@@ -89,3 +89,46 @@ def convert_files_to_images(uploaded_files) -> List[Image.Image]:
         images = convert_file_to_images(uploaded_file)
         all_images.extend(images)
     return all_images
+
+
+def stitch_images_vertically(images: List[Image.Image]) -> Image.Image:
+    """
+    Stitch multiple images vertically into one image
+
+    Args:
+        images: List of PIL Images to stitch
+
+    Returns:
+        Single stitched PIL Image
+
+    Raises:
+        ValueError: If images list is empty
+    """
+    if not images:
+        raise ValueError("No images to stitch")
+
+    if len(images) == 1:
+        return images[0]
+
+    # Get maximum width and total height
+    max_width = max(img.width for img in images)
+    total_height = sum(img.height for img in images)
+
+    # Create new image with white background
+    stitched = Image.new('RGB', (max_width, total_height), 'white')
+
+    # Paste images vertically
+    current_y = 0
+    for img in images:
+        # Convert RGBA to RGB if needed
+        if img.mode == 'RGBA':
+            background = Image.new('RGB', img.size, 'white')
+            background.paste(img, mask=img.split()[3])  # Use alpha channel as mask
+            img = background
+
+        # Center image horizontally if narrower than max_width
+        x_offset = (max_width - img.width) // 2
+        stitched.paste(img, (x_offset, current_y))
+        current_y += img.height
+
+    return stitched

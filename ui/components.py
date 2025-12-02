@@ -98,11 +98,12 @@ def render_file_upload_section() -> tuple[Optional[List[Image.Image]], Optional[
     """
     Render file upload section for user handwriting and standard answer
     Supports images (PNG, JPG, JPEG) and PDF files
+    Standard answer: If multiple files uploaded, they will be stitched vertically
 
     Returns:
         Tuple of (user_images, answer_image) or (None, None) if not uploaded
     """
-    from utils.file_converter import convert_files_to_images, is_pdf_supported
+    from utils.file_converter import convert_files_to_images, is_pdf_supported, stitch_images_vertically
 
     st.markdown('<div class="minimal-container">', unsafe_allow_html=True)
 
@@ -116,7 +117,7 @@ def render_file_upload_section() -> tuple[Optional[List[Image.Image]], Optional[
     col1, col2 = st.columns(2)
 
     user_files = None
-    answer_file = None
+    answer_files = None
 
     with col1:
         st.markdown("### 01. User Handwriting")
@@ -129,28 +130,38 @@ def render_file_upload_section() -> tuple[Optional[List[Image.Image]], Optional[
 
     with col2:
         st.markdown("### 02. Standard Answer")
-        answer_file = st.file_uploader(
-            "Upload image or PDF",
+        answer_files = st.file_uploader(
+            "Upload images or PDF (multiple files will be stitched)",
             type=supported_types,
-            label_visibility="collapsed"
+            accept_multiple_files=True,
+            label_visibility="collapsed",
+            key="answer_uploader"
         )
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Convert files to PIL Images
-    if user_files and answer_file:
+    if user_files and answer_files:
         try:
             user_images = convert_files_to_images(user_files)
-            answer_images = convert_files_to_images([answer_file])
-            answer_image = answer_images[0]
+            answer_images = convert_files_to_images(answer_files)
 
-            # Show conversion info if PDF files were processed
+            # Stitch answer images if multiple
+            if len(answer_images) > 1:
+                answer_image = stitch_images_vertically(answer_images)
+                st.info(f"✓ Stitched {len(answer_images)} answer images vertically")
+            else:
+                answer_image = answer_images[0]
+
+            # Show PDF conversion info if needed
             pdf_count = sum(1 for f in user_files if f.type == 'application/pdf')
-            if pdf_count > 0 or answer_file.type == 'application/pdf':
+            answer_pdf_count = sum(1 for f in answer_files if f.type == 'application/pdf')
+
+            if pdf_count > 0 or answer_pdf_count > 0:
                 st.info(
-                    f"✓ PDF converted: {len(user_images)} images "
-                    f"(Answer: using page 1)"
+                    f"✓ PDF converted: {len(user_images)} user images, "
+                    f"{len(answer_images)} answer images"
                 )
 
             return user_images, answer_image
