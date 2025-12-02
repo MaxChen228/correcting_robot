@@ -270,17 +270,6 @@ def apply_custom_theme():
         border-left: 2px solid #333;
     }
 
-    /* Flashcard item - Sharp Corners */
-    .flashcard-item {
-        border-radius: 0 !important;
-        transition: all 0.3s ease;
-    }
-
-    .flashcard-item:hover {
-        border-color: #444;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-    }
-
     /* Status Container - Sharp Corners */
     .stStatus {
         background: rgba(18, 18, 18, 0.5) !important;

@@ -405,83 +405,6 @@ def render_correction_results(transcription_data=None, correction_data=None, sho
         st.error(f"Parsing Error: {e}")
 
 
-def render_flashcards_section(flashcards_csv: str, show_title: bool = True, download_filename: str = "flashcards.csv"):
-    """
-    Render flashcards preview and download section
-
-    Args:
-        flashcards_csv: CSV string of flashcards
-        show_title: Whether to show the title (default: True)
-        download_filename: Filename for download button (default: "flashcards.csv")
-    """
-    if show_title:
-        st.markdown('<h2 style="text-align: center;">Study Cards</h2>', unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-
-    lines = flashcards_csv.strip().split('\n')
-
-    tab1, tab2 = st.tabs(["PREVIEW", "CSV DATA"])
-
-    with tab1:
-        if len(lines) > 1:
-            reader = csv.DictReader(io.StringIO(flashcards_csv))
-            for idx, row in enumerate(reader, 1):
-                if idx > 6:  # Show only first 6 cards
-                    break
-
-                # Flashcard item wrapper - Sharp corners
-                st.markdown("""
-                <div class="flashcard-item" style="
-                    padding: 1.5rem;
-                    border: 1px solid #222;
-                    border-radius: 0;
-                    margin-bottom: 1.5rem;
-                    background: rgba(18, 18, 18, 0.4);
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                    transition: all 0.3s ease;
-                ">
-                """, unsafe_allow_html=True)
-
-                col1, col2 = st.columns([1, 2])
-                with col1:
-                    st.markdown(
-                        f"<span style='font-family:Space Mono; font-size:0.8rem; color:#666'>FRONT</span>",
-                        unsafe_allow_html=True
-                    )
-                    st.markdown(
-                        f"<p style='font-size:1.1rem'>{row.get('Front', '')}</p>",
-                        unsafe_allow_html=True
-                    )
-                with col2:
-                    st.markdown(
-                        f"<span style='font-family:Space Mono; font-size:0.8rem; color:#666'>BACK</span>",
-                        unsafe_allow_html=True
-                    )
-                    st.markdown(
-                        f"<p style='font-size:1.1rem; color:#aaa'>{row.get('Back', '')}</p>",
-                        unsafe_allow_html=True
-                    )
-
-                st.markdown("</div>", unsafe_allow_html=True)
-
-    with tab2:
-        st.text_area(
-            label="CSV",
-            value=flashcards_csv,
-            height=300,
-            label_visibility="collapsed"
-        )
-
-    # Download button
-    st.download_button(
-        label="DOWNLOAD CSV",
-        data=flashcards_csv,
-        file_name=download_filename,
-        mime="text/csv",
-        use_container_width=True
-    )
-
-
 def render_history_page(history_records: list):
     """
     Render history archive page
@@ -508,7 +431,6 @@ def render_history_page(history_records: list):
         timestamp = record.get('timestamp', 'Unknown')
         transcriptions = record.get('transcriptions', [])
         corrections = record.get('corrections', [])
-        flashcards = record.get('flashcards', '')
         record_id = record.get('id', idx)
 
         # Format timestamp
@@ -526,7 +448,6 @@ def render_history_page(history_records: list):
             if st.button("Restore this record", key=f"restore_{record_id}"):
                 st.session_state.restored_transcriptions = transcriptions
                 st.session_state.restored_corrections = corrections
-                st.session_state.restored_flashcards = flashcards
                 st.session_state.show_history = False
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
@@ -536,10 +457,3 @@ def render_history_page(history_records: list):
             # Use shared rendering functions
             if corrections:
                 render_correction_results(transcriptions, corrections, show_title=False)
-
-            if flashcards:
-                render_flashcards_section(
-                    flashcards,
-                    show_title=False,
-                    download_filename=f"flashcards_{formatted_time.replace(' ', '_').replace(':', '-')}.csv"
-                )

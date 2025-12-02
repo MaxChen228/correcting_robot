@@ -35,7 +35,6 @@ class DatabaseService:
     def save_correction(
         self,
         correction_data: list,
-        flashcards_csv: str,
         transcription_data: Optional[list] = None
     ) -> bool:
         """
@@ -43,7 +42,6 @@ class DatabaseService:
 
         Args:
             correction_data: Agent 2 output (Correction JSON data as list)
-            flashcards_csv: Agent 3 output (Flashcards CSV string)
             transcription_data: Agent 1 output (Transcription JSON data as list, optional)
 
         Returns:
@@ -56,7 +54,6 @@ class DatabaseService:
             history_entry = {
                 "timestamp": datetime.now().isoformat(),
                 "corrections": correction_data,
-                "flashcards": flashcards_csv,
                 "transcriptions": transcription_data
             }
             self.client.table("correction_history").insert(history_entry).execute()

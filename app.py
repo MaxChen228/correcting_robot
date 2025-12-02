@@ -13,10 +13,9 @@ from ui.components import (
     render_file_upload_section,
     render_sidebar_settings,
     render_correction_results,
-    render_flashcards_section,
     render_history_page
 )
-from agents import transcription, correction, flashcards
+from agents import transcription, correction
 
 
 def main():
@@ -52,7 +51,7 @@ def main():
         return
 
     # Check if there's a restored record to display
-    if st.session_state.get('restored_corrections') and st.session_state.get('restored_flashcards'):
+    if st.session_state.get('restored_corrections'):
         # Show info and clear button
         col1, col2 = st.columns([3, 1])
         with col1:
@@ -61,7 +60,6 @@ def main():
             if st.button("Clear", use_container_width=True):
                 st.session_state.restored_transcriptions = None
                 st.session_state.restored_corrections = None
-                st.session_state.restored_flashcards = None
                 st.rerun()
 
         # Display restored results
@@ -69,7 +67,6 @@ def main():
             st.session_state.get('restored_transcriptions'),
             st.session_state.restored_corrections
         )
-        render_flashcards_section(st.session_state.restored_flashcards)
         return
 
     # File upload section
@@ -132,30 +129,17 @@ def run_analysis_pipeline(user_images, answer_image, debug_mode, db):
             status.update(label="Correction Failed", state="error")
             return
 
-    # --- Stage 3: Flashcards ---
-    with st.status("Generating Study Materials...", expanded=True) as status:
-        flashcards_result = flashcards.process(correction_result, debug_mode)
-
-        if flashcards_result:
-            lines = flashcards_result.strip().split('\n')
-            st.write(f"Generated {max(0, len(lines) - 1)} cards")
-            status.update(label="Generation Complete", state="complete", expanded=False)
-        else:
-            status.update(label="Generation Failed", state="error")
-            return
-
     # --- Save to Database ---
     if db.is_connected():
         try:
             transcription_data = json.loads(transcription_result)
             correction_data = json.loads(correction_result)
-            db.save_correction(correction_data, flashcards_result, transcription_data)
+            db.save_correction(correction_data, transcription_data)
         except Exception:
             pass  # Silent fail for elegance
 
     # --- Display Results ---
     render_correction_results(transcription_result, correction_result)
-    render_flashcards_section(flashcards_result)
 
 
 if __name__ == "__main__":
