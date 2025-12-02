@@ -3,13 +3,89 @@ UI Components
 使用者介面組件與互動邏輯
 """
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import csv
 import io
 from typing import Optional, List
+from uuid import uuid4
 from PIL import Image
 
 from config.settings import Config
+
+
+def render_copy_json_button(json_text: str, label: str = "COPY 批改 JSON") -> None:
+    """Render a clipboard button for copying formatted JSON."""
+    if not json_text:
+        return
+
+    button_id = f"copy-json-btn-{uuid4().hex}"
+    safe_json_payload = json.dumps(json_text).replace("</", "<\\/")
+    components.html(
+        f"""
+        <style>
+            body {{
+                margin: 0;
+                background: transparent;
+                font-family: 'Space Mono', monospace;
+            }}
+            #{button_id} {{
+                background: rgba(255,255,255,0.02);
+                border: 1px solid #333;
+                color: #f5f5f5;
+                font-size: 0.72rem;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                padding: 0.65rem 1.75rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }}
+            #{button_id}:hover {{
+                border-color: #666;
+                color: #ffffff;
+            }}
+            #{button_id}.copied {{
+                border-color: #2ecc71;
+                color: #2ecc71;
+            }}
+            #{button_id}.error {{
+                border-color: #ff6b6b;
+                color: #ff6b6b;
+            }}
+        </style>
+        <div style="display:flex; justify-content:flex-end; margin:-12px 0 20px 0;">
+            <button id="{button_id}">{label}</button>
+        </div>
+        <script>
+            (function() {{
+                const copyBtn = document.getElementById('{button_id}');
+                const payload = {safe_json_payload};
+                if (!copyBtn || !payload) return;
+                const defaultText = copyBtn.textContent;
+
+                copyBtn.addEventListener('click', async () => {{
+                    try {{
+                        await navigator.clipboard.writeText(payload);
+                        copyBtn.textContent = 'COPIED!';
+                        copyBtn.classList.remove('error');
+                        copyBtn.classList.add('copied');
+                    }} catch (err) {{
+                        copyBtn.textContent = 'COPY FAILED';
+                        copyBtn.classList.remove('copied');
+                        copyBtn.classList.add('error');
+                    }} finally {{
+                        setTimeout(() => {{
+                            copyBtn.textContent = defaultText;
+                            copyBtn.classList.remove('copied');
+                            copyBtn.classList.remove('error');
+                        }}, 1800);
+                    }}
+                }});
+            }})();
+        </script>
+        """,
+        height=70,
+    )
 
 
 def render_file_upload_section() -> tuple[Optional[List[Image.Image]], Optional[Image.Image]]:
@@ -105,10 +181,18 @@ def render_correction_results(transcription_data=None, correction_data=None, sho
             transcription_dict = {item.get('id'): item for item in trans_list}
 
         # Parse correction data (Agent 2: {id, user, correction, feedback})
+        formatted_json = ""
         if isinstance(correction_data, str):
             data = json.loads(correction_data)
         else:
             data = correction_data
+
+        if data is None:
+            data = []
+
+        if data:
+            formatted_json = json.dumps(data, ensure_ascii=False, indent=2)
+            render_copy_json_button(formatted_json)
 
         for idx, item in enumerate(data, 1):
             question_id = item.get('id', f'{idx:02d}')
