@@ -7,12 +7,18 @@ import streamlit.components.v1 as components
 import json
 import csv
 import io
+import textwrap
 from typing import Optional, List
 from uuid import uuid4
 from PIL import Image
 
 from config.settings import Config
 
+
+
+def clean_html(html: str) -> str:
+    """Clean HTML string by removing all indentation line by line."""
+    return "\n".join(line.strip() for line in html.split("\n") if line.strip())
 
 def render_copy_json_button(json_text: str, label: str = "COPY 批改 JSON") -> None:
     """Render a clipboard button for copying formatted JSON."""
@@ -234,87 +240,166 @@ def render_correction_results(transcription_data=None, correction_data=None, sho
                 # Old records without transcription data
                 standard_text = '(資料不可用)'
 
-            # Card wrapper - Sharp corners style
-            st.markdown("""
+            # Card wrapper - Premium Sharp Look
+            # Build the complete HTML string first to avoid Streamlit/Browser auto-closing tags between st.markdown calls
+            html_content = f"""
             <div class="correction-card-sharp" style="
-                background: rgba(18, 18, 18, 0.6);
-                border: 1px solid #333;
-                border-radius: 0;
-                padding: 24px;
-                margin-bottom: 32px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                transition: all 0.3s ease;
+                background: #0f0f0f;
+                border: 1px solid #2a2a2a;
+                border-left: 3px solid #e0e0e0;
+                padding: 0;
+                margin-bottom: 40px;
+                position: relative;
             ">
-            """, unsafe_allow_html=True)
-
-            # Card header
-            st.markdown(f"""
-                <div class="card-header" style="
-                    padding-bottom: 1rem;
-                    margin-bottom: 1.5rem;
-                    border-bottom: 1px solid #333;
+                <!-- Header Section -->
+                <div style="
+                    padding: 20px 30px;
+                    border-bottom: 1px solid #1f1f1f;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: rgba(255,255,255,0.01);
                 ">
                     <h3 style="
-                        color: #888;
+                        color: #666;
                         font-family: 'Space Mono', monospace;
-                        font-size: 0.85rem;
-                        letter-spacing: 0.15em;
-                        text-transform: uppercase;
+                        font-size: 0.9rem;
+                        letter-spacing: 0.2em;
                         margin: 0;
-                    ">NO. {question_id}</h3>
+                    ">ANALYSIS {question_id}</h3>
+                    <div style="
+                        font-family: 'Space Mono', monospace;
+                        font-size: 0.7rem;
+                        color: #4a8;
+                        border: 1px solid #2a4a3a;
+                        background: rgba(46, 204, 113, 0.05);
+                        padding: 4px 8px;
+                    ">AUTO-CORRECTED</div>
                 </div>
-            """, unsafe_allow_html=True)
 
-            # Upper section: User | Standard (small text, secondary color)
-            col1, col2 = st.columns(2)
+                <!-- Content Section -->
+                <div style="padding: 30px;">
+                    <!-- Comparison Grid -->
+                    <div style="
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 40px;
+                        margin-bottom: 30px;
+                    ">
+                        <!-- User Input -->
+                        <div>
+                            <div style="
+                                font-family: 'Space Mono', monospace;
+                                font-size: 0.7rem;
+                                color: #555;
+                                letter-spacing: 0.1em;
+                                margin-bottom: 12px;
+                                text-transform: uppercase;
+                            ">Original Input</div>
+                            <div style="
+                                font-family: 'Inter', sans-serif;
+                                font-size: 1rem;
+                                color: #888;
+                                line-height: 1.6;
+                                padding-left: 15px;
+                                border-left: 1px solid #333;
+                            ">{user_text}</div>
+                        </div>
 
-            with col1:
-                st.markdown('<p style="font-family: Space Mono; font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">USER WRITING</p>', unsafe_allow_html=True)
-                st.markdown(
-                    f"<p class='text-small text-secondary' style='font-family: Inter; font-size: 0.85rem; color: #999; line-height: 1.5;'>{user_text}</p>",
-                    unsafe_allow_html=True
-                )
+                        <!-- Standard Answer -->
+                        <div>
+                            <div style="
+                                font-family: 'Space Mono', monospace;
+                                font-size: 0.7rem;
+                                color: #555;
+                                letter-spacing: 0.1em;
+                                margin-bottom: 12px;
+                                text-transform: uppercase;
+                            ">Standard Reference</div>
+                            <div style="
+                                font-family: 'Inter', sans-serif;
+                                font-size: 1rem;
+                                color: #888;
+                                line-height: 1.6;
+                                padding-left: 15px;
+                                border-left: 1px solid #333;
+                            ">{standard_text}</div>
+                        </div>
+                    </div>
 
-            with col2:
-                st.markdown('<p style="font-family: Space Mono; font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">STANDARD ANSWER</p>', unsafe_allow_html=True)
-                st.markdown(
-                    f"<p class='text-small text-secondary' style='font-family: Inter; font-size: 0.85rem; color: #999; line-height: 1.5;'>{standard_text}</p>",
-                    unsafe_allow_html=True
-                )
+                    <!-- Correction Hero Section -->
+                    <div style="
+                        background: rgba(255,255,255,0.03);
+                        border: 1px solid #222;
+                        padding: 25px;
+                        margin-bottom: 30px;
+                        position: relative;
+                    ">
+                        <div style="
+                            position: absolute;
+                            top: -10px;
+                            left: 20px;
+                            background: #0f0f0f;
+                            padding: 0 10px;
+                            font-family: 'Space Mono', monospace;
+                            font-size: 0.7rem;
+                            color: #e0e0e0;
+                            letter-spacing: 0.1em;
+                        ">OPTIMIZED CORRECTION</div>
+                        <div style="
+                            font-family: 'Cormorant Garamond', serif;
+                            font-size: 1.6rem;
+                            color: #fff;
+                            line-height: 1.4;
+                            font-style: italic;
+                        ">{correction_text}</div>
+                    </div>
 
-            # Divider
-            st.markdown("""
-                <div class="divider" style="
-                    height: 1px;
-                    background: linear-gradient(90deg, transparent 0%, #444 10%, #444 90%, transparent 100%);
-                    margin: 1.5rem 0;
-                "></div>
-            """, unsafe_allow_html=True)
+                    <!-- Feedback/Notes -->
+                    <div>
+                        <div style="
+                            font-family: 'Space Mono', monospace;
+                            font-size: 0.7rem;
+                            color: #555;
+                            letter-spacing: 0.1em;
+                            margin-bottom: 15px;
+                            text-transform: uppercase;
+                        ">Key Insights</div>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+            """
 
-            # Lower section: Correction (large text, primary color, emphasis)
-            st.markdown('<p style="font-family: Space Mono; font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">CORRECTION</p>', unsafe_allow_html=True)
-            st.markdown(
-                f"<p class='text-large text-primary' style='font-family: Inter; font-size: 1.1rem; color: #e0e0e0; line-height: 1.7; font-weight: 500;'>{correction_text}</p>",
-                unsafe_allow_html=True
-            )
+            # Handle feedback items
+            feedback_items = feedback if isinstance(feedback, list) else [feedback]
+            for point in feedback_items:
+                html_content += f"""
+                    <div style="
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 12px;
+                    ">
+                        <span style="
+                            color: #4a8;
+                            font-size: 1.2rem;
+                            line-height: 1;
+                            margin-top: -2px;
+                        ">›</span>
+                        <span style="
+                            font-family: 'Inter', sans-serif;
+                            font-size: 0.95rem;
+                            color: #bbb;
+                            line-height: 1.5;
+                        ">{point}</span>
+                    </div>
+                """
 
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown('<p style="font-family: Space Mono; font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">NOTES</p>', unsafe_allow_html=True)
+            html_content += """
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """
 
-            # Handle feedback as list or string
-            if isinstance(feedback, list):
-                for point in feedback:
-                    st.markdown(
-                        f"<p class='note-item' style='font-family: Cormorant Garamond; font-style: italic; color: #aaa; margin-bottom: 0.5rem; padding-left: 0.5rem; border-left: 2px solid #333;'>— {point}</p>",
-                        unsafe_allow_html=True
-                    )
-            else:
-                st.markdown(
-                    f"<p class='note-item' style='font-family: Cormorant Garamond; font-style: italic; color: #aaa; padding-left: 0.5rem; border-left: 2px solid #333;'>— {feedback}</p>",
-                    unsafe_allow_html=True
-                )
-
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(clean_html(html_content), unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Parsing Error: {e}")
