@@ -4,3 +4,4 @@ pandas
 python-dotenv
 pillow
 supabase
+pdf2image

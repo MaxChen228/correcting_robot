@@ -59,12 +59,16 @@ def main():
             st.info("Displaying restored record from history")
         with col2:
             if st.button("Clear", use_container_width=True):
+                st.session_state.restored_transcriptions = None
                 st.session_state.restored_corrections = None
                 st.session_state.restored_flashcards = None
                 st.rerun()
 
         # Display restored results
-        render_correction_results(st.session_state.restored_corrections)
+        render_correction_results(
+            st.session_state.get('restored_transcriptions'),
+            st.session_state.restored_corrections
+        )
         render_flashcards_section(st.session_state.restored_flashcards)
         return
 
@@ -143,8 +147,9 @@ def run_analysis_pipeline(user_images, answer_image, debug_mode, db):
     # --- Save to Database ---
     if db.is_connected():
         try:
+            transcription_data = json.loads(transcription_result)
             correction_data = json.loads(correction_result)
-            db.save_correction(correction_data, flashcards_result)
+            db.save_correction(correction_data, flashcards_result, transcription_data)
         except Exception:
             pass  # Silent fail for elegance
 

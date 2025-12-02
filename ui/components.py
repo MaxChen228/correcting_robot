@@ -91,11 +91,22 @@ def render_copy_json_button(json_text: str, label: str = "COPY 批改 JSON") -> 
 def render_file_upload_section() -> tuple[Optional[List[Image.Image]], Optional[Image.Image]]:
     """
     Render file upload section for user handwriting and standard answer
+    Supports images (PNG, JPG, JPEG) and PDF files
 
     Returns:
         Tuple of (user_images, answer_image) or (None, None) if not uploaded
     """
+    from utils.file_converter import convert_files_to_images, is_pdf_supported
+
     st.markdown('<div class="minimal-container">', unsafe_allow_html=True)
+
+    # Check PDF support and determine supported types
+    supported_types = ['png', 'jpg', 'jpeg']
+    if is_pdf_supported():
+        supported_types.append('pdf')
+    else:
+        st.info("PDF support not enabled. Install: pip install pdf2image && brew install poppler")
+
     col1, col2 = st.columns(2)
 
     user_files = None
@@ -104,8 +115,8 @@ def render_file_upload_section() -> tuple[Optional[List[Image.Image]], Optional[
     with col1:
         st.markdown("### 01. User Handwriting")
         user_files = st.file_uploader(
-            "Upload images",
-            type=['png', 'jpg', 'jpeg'],
+            "Upload images or PDF",
+            type=supported_types,
             accept_multiple_files=True,
             label_visibility="collapsed"
         )
@@ -113,19 +124,34 @@ def render_file_upload_section() -> tuple[Optional[List[Image.Image]], Optional[
     with col2:
         st.markdown("### 02. Standard Answer")
         answer_file = st.file_uploader(
-            "Upload image",
-            type=['png', 'jpg', 'jpeg'],
+            "Upload image or PDF",
+            type=supported_types,
             label_visibility="collapsed"
         )
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Convert to PIL Images if files are uploaded
+    # Convert files to PIL Images
     if user_files and answer_file:
-        user_images = [Image.open(f) for f in user_files]
-        answer_image = Image.open(answer_file)
-        return user_images, answer_image
+        try:
+            user_images = convert_files_to_images(user_files)
+            answer_images = convert_files_to_images([answer_file])
+            answer_image = answer_images[0]
+
+            # Show conversion info if PDF files were processed
+            pdf_count = sum(1 for f in user_files if f.type == 'application/pdf')
+            if pdf_count > 0 or answer_file.type == 'application/pdf':
+                st.info(
+                    f"✓ PDF converted: {len(user_images)} images "
+                    f"(Answer: using page 1)"
+                )
+
+            return user_images, answer_image
+
+        except Exception as e:
+            st.error(f"File conversion failed: {str(e)}")
+            return None, None
 
     return None, None
 
@@ -204,6 +230,9 @@ def render_correction_results(transcription_data=None, correction_data=None, sho
             standard_text = ''
             if question_id in transcription_dict:
                 standard_text = transcription_dict[question_id].get('standard', '')
+            elif not transcription_data:
+                # Old records without transcription data
+                standard_text = '(資料不可用)'
 
             # Card wrapper - Sharp corners style
             st.markdown("""
@@ -392,6 +421,7 @@ def render_history_page(history_records: list):
     # Display each history record
     for idx, record in enumerate(history_records, 1):
         timestamp = record.get('timestamp', 'Unknown')
+        transcriptions = record.get('transcriptions', [])
         corrections = record.get('corrections', [])
         flashcards = record.get('flashcards', '')
         record_id = record.get('id', idx)
@@ -409,6 +439,7 @@ def render_history_page(history_records: list):
             # Restore button with wrapper
             st.markdown('<div class="restore-button-wrapper">', unsafe_allow_html=True)
             if st.button("Restore this record", key=f"restore_{record_id}"):
+                st.session_state.restored_transcriptions = transcriptions
                 st.session_state.restored_corrections = corrections
                 st.session_state.restored_flashcards = flashcards
                 st.session_state.show_history = False
@@ -419,7 +450,7 @@ def render_history_page(history_records: list):
 
             # Use shared rendering functions
             if corrections:
-                render_correction_results(corrections, show_title=False)
+                render_correction_results(transcriptions, corrections, show_title=False)
 
             if flashcards:
                 render_flashcards_section(

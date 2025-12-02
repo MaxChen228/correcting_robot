@@ -32,13 +32,19 @@ class DatabaseService:
         """Check if database is connected"""
         return self.client is not None
 
-    def save_correction(self, correction_data: list, flashcards_csv: str) -> bool:
+    def save_correction(
+        self,
+        correction_data: list,
+        flashcards_csv: str,
+        transcription_data: Optional[list] = None
+    ) -> bool:
         """
         Save correction result to history
 
         Args:
-            correction_data: Correction JSON data (as list)
-            flashcards_csv: Flashcards CSV string
+            correction_data: Agent 2 output (Correction JSON data as list)
+            flashcards_csv: Agent 3 output (Flashcards CSV string)
+            transcription_data: Agent 1 output (Transcription JSON data as list, optional)
 
         Returns:
             True if successful, False otherwise
@@ -50,7 +56,8 @@ class DatabaseService:
             history_entry = {
                 "timestamp": datetime.now().isoformat(),
                 "corrections": correction_data,
-                "flashcards": flashcards_csv
+                "flashcards": flashcards_csv,
+                "transcriptions": transcription_data
             }
             self.client.table("correction_history").insert(history_entry).execute()
             return True
